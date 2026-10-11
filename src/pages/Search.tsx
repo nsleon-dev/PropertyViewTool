@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ParcelList } from '../components/ParcelList';
+import { SubjectPanel, type Target } from '../components/SubjectPanel';
+import { LookupView } from './Lookup';
 import { FilterPanel } from '../components/FilterPanel';
 import { InfoPanel, type Focus } from '../components/InfoPanel';
 import type { ParcelRecord } from '../lib/parcels';
@@ -85,6 +87,12 @@ export function Search() {
   const [understood, setUnderstood] = useState<string[]>([]);
   const [outline, setOutline] = useState<ParcelRecord['outline'] | null>(null);
   const [showResults, setShowResults] = useState(memory.showResults);
+  const [sheet, setSheet] = useState<Target | null>(null);
+  const spot = inspect?.kind === 'spot' ? inspect : null;
+  // A searched or clicked property always opens its panel.
+  useEffect(() => {
+    if (spot) setShowResults(true);
+  }, [spot]);
 
   const results = useMemo(() => runSearch(loc, criteria, leadLists).sort(SORTS[sort].fn), [loc, criteria, leadLists, sort]);
   const fitKey = JSON.stringify([loc, criteria, leadLists]);
@@ -279,7 +287,7 @@ export function Search() {
             initialView={initialView}
             onView={(v) => { rememberView(v); setCenter(v); }}
           />
-          {inspect && <InfoPanel focus={inspect} onClose={() => setInspect(null)} isSelected={(id) => selected.has(id)} onToggle={toggle} onOpenRecord={(id) => setInspect({ kind: 'record', id })} onParcel={setOutline} />}
+          {inspect?.kind === 'record' && <InfoPanel focus={inspect} onClose={() => setInspect(null)} isSelected={(id) => selected.has(id)} onToggle={toggle} onOpenRecord={(id) => setInspect({ kind: 'record', id })} onParcel={setOutline} />}
           <button className="results-toggle" onClick={() => setShowResults(!showResults)} aria-expanded={showResults} title={showResults ? 'Hide results list' : 'Show results list'}>
             {showResults ? '›' : '‹ Parcels'}
           </button>
@@ -297,8 +305,12 @@ export function Search() {
           </div>
         </div>
 
-        <section className="results" hidden={!showResults}>
-          <ParcelList view={center} onOpen={(p) => setInspect({ kind: 'spot', lat: p.lat, lng: p.lng })} />
+        <section className={`results${spot ? ' with-subject' : ''}`} hidden={!showResults}>
+          {spot ? (
+            <SubjectPanel key={`${spot.lat},${spot.lng}`} lat={spot.lat} lng={spot.lng} known={spot.address} onClose={() => setInspect(null)} onOpen={setSheet} onParcel={setOutline} />
+          ) : (
+            <ParcelList view={center} onOpen={(p) => setInspect({ kind: 'spot', lat: p.lat, lng: p.lng })} />
+          )}
           <div className="results-actions sample-bar">
             <span className="muted" title="The orange pins are the built-in sample dataset, used by lead lists, filters and marketing lists">
               Sample pins: <b>{results.length.toLocaleString()}</b>{selected.size > 0 && ` · ${selected.size.toLocaleString()} selected`}
@@ -310,6 +322,13 @@ export function Search() {
         </section>
       </div>
 
+      {sheet && (
+        <div className="modal-backdrop" onMouseDown={(e) => e.target === e.currentTarget && setSheet(null)}>
+          <div className="sheet" role="dialog" aria-label={`Details for ${sheet.address}`}>
+            <LookupView lat={sheet.lat} lng={sheet.lng} address={sheet.address} onClose={() => setSheet(null)} />
+          </div>
+        </div>
+      )}
       {modal === 'add' && <AddToListModal ids={actionIds} onClose={() => setModal('')} source={selected.size ? undefined : { loc, criteria, leadLists }} />}
       {modal === 'save' && (
         <Modal title="Save this search" onClose={() => setModal('')}>

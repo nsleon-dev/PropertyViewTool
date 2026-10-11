@@ -9,7 +9,7 @@ import { areaContext } from '../lib/ai';
 import { money } from '../lib/format';
 import { coveredAreas, lookupParcel, pick, type ParcelResult } from '../lib/parcels';
 import { usePlace } from '../lib/place';
-import { lookupEstimates, lookupRecord, type ExternalRecord } from '../lib/provider';
+import { cachedRecord, lookupEstimates, lookupRecord, type ExternalRecord } from '../lib/provider';
 import { LEAD_STATUSES, dataKey, setState, spotId, uid, useStore } from '../lib/store';
 
 const TABS = ['Property Details', 'Intelligence', 'Demographics', 'Tax Information', 'Sales History', 'Documents & Reports'];
@@ -18,11 +18,13 @@ const amount = (text: string | null) => (text ? Number(text.replace(/[^0-9.]/g, 
 // Full-page view of a real address: the public assessor record, census demographics,
 // and (with a property data key) building facts, sales and estimates.
 export function Lookup() {
-  const nav = useNavigate();
   const [params] = useSearchParams();
-  const lat = Number(params.get('lat'));
-  const lng = Number(params.get('lng'));
-  const address = params.get('address') ?? '';
+  return <LookupView lat={Number(params.get('lat'))} lng={Number(params.get('lng'))} address={params.get('address') ?? ''} />;
+}
+
+// `onClose` is set when the view is shown as a pop-up over the map.
+export function LookupView({ lat, lng, address, onClose }: { lat: number; lng: number; address: string; onClose?: () => void }) {
+  const nav = useNavigate();
   const id = spotId(lat, lng);
   const { status } = useStore();
   const key = dataKey();
@@ -40,7 +42,7 @@ export function Lookup() {
   useEffect(() => {
     let live = true;
     setParcel(null);
-    setExt(null);
+    setExt(cachedRecord(address));
     setEstimates(null);
     lookupParcel(lat, lng, address || undefined).then((r) => live && setParcel(r), (e) => live && setError(e instanceof Error ? e.message : 'The public record service could not be reached.'));
     return () => {
@@ -80,7 +82,7 @@ export function Lookup() {
   return (
     <div className="page detail">
       <header className="detail-head">
-        <button className="icon-btn no-print" onClick={() => nav(-1)} aria-label="Back"><Icon name="back" /></button>
+        <button className="icon-btn no-print" onClick={() => (onClose ? onClose() : nav(-1))} aria-label={onClose ? 'Close' : 'Back'}><Icon name={onClose ? 'close' : 'back'} /></button>
         <div className="grow">
           <h1>{title}</h1>
           <div className="muted">{rec ? `Public record · ${rec.source}${rec.nearest ? ' · nearest parcel to this point' : ''}` : parcel ? 'No public parcel record for this location' : error || 'Loading public record…'}</div>

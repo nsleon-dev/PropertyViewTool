@@ -66,6 +66,10 @@ other states; add a county layer to `SOURCES` to cover one.
 The right-hand panel on the Search page lists the real parcels in the map view once zoomed to street level
 (zoom 16+), from the same sources.
 
+Searching an address or clicking a lot swaps that panel for the property's summary card and a **Nearby**
+table (beds, baths, assessed value, last sale) loaded with one RentCast radius request; addresses open the
+full tabbed view as a pop-up.
+
 Every US location also gets **Location Facts** (`src/lib/place.ts`): FEMA flood zone, city, county, school
 district (Census TIGERweb) and elevation (USGS).
 

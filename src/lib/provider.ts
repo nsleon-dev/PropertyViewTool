@@ -47,14 +47,8 @@ function latest<T>(byKey: Record<string, T> | undefined): T | undefined {
   return keys.length ? byKey![keys[keys.length - 1]] : undefined;
 }
 
-export async function lookupRecord(address: string, key: string): Promise<ExternalRecord | null> {
-  if (cache.has(address)) return cache.get(address)!;
-  const data = await get(`/properties?address=${encodeURIComponent(address)}&limit=1`, key);
-  const r = Array.isArray(data) ? data[0] : data;
-  if (!r) {
-    cache.set(address, null);
-    return null;
-  }
+// Maps one RentCast property object to the app's record shape.
+function build(r: any, address: string): ExternalRecord {
   const f = r.features ?? {};
   const assess: any = latest(r.taxAssessments);
   const tax: any = latest(r.propertyTaxes);
@@ -92,8 +86,79 @@ export async function lookupRecord(address: string, key: string): Promise<Extern
       },
     ],
   };
+  return rec;
+}
+
+export async function lookupRecord(address: string, key: string): Promise<ExternalRecord | null> {
+  if (cache.has(address)) return cache.get(address)!;
+  const data = await get(`/properties?address=${encodeURIComponent(address)}&limit=1`, key);
+  const r = Array.isArray(data) ? data[0] : data;
+  const rec = r ? build(r, address) : null;
   cache.set(address, rec);
   return rec;
+}
+
+// A record already fetched this session (by address lookup or as someone's neighbour), at no cost.
+export const cachedRecord = (address: string): ExternalRecord | null => cache.get(address) ?? null;
+
+export interface Neighbor {
+  address: string;
+  street: string;
+  lat: number;
+  lng: number;
+  beds: number | null;
+  baths: number | null;
+  sqft: number | null;
+  lotSize: number | null;
+  yearBuilt: number | null;
+  type: string | null;
+  assessed: number | null;
+  salePrice: number | null;
+  saleDate: string | null;
+  ownerName: string | null;
+  ownerOccupied: boolean | null;
+  miles: number;
+}
+
+const nearby = new Map<string, Promise<Neighbor[]>>();
+
+// Every property RentCast has within `radius` miles, nearest first, in one request.
+// The searched property itself is normally the first row.
+export function lookupNearby(lat: number, lng: number, key: string, radius = 0.2): Promise<Neighbor[]> {
+  const id = `${lat.toFixed(5)},${lng.toFixed(5)},${radius}`;
+  if (!nearby.has(id)) nearby.set(id, fetchNearby(lat, lng, key, radius).catch((e) => (nearby.delete(id), Promise.reject(e))));
+  return nearby.get(id)!;
+}
+
+async function fetchNearby(lat: number, lng: number, key: string, radius: number): Promise<Neighbor[]> {
+  const data = await get(`/properties?latitude=${lat}&longitude=${lng}&radius=${radius}&limit=150`, key);
+  const perLng = 69.17 * Math.cos((lat * Math.PI) / 180);
+  return (Array.isArray(data) ? data : [])
+    .filter((r: any) => typeof r.latitude === 'number' && typeof r.longitude === 'number' && r.formattedAddress)
+    .map((r: any): Neighbor => {
+      const rec = build(r, r.formattedAddress);
+      cache.set(r.formattedAddress, rec);
+      const assess: any = latest(r.taxAssessments);
+      return {
+        address: r.formattedAddress,
+        street: r.addressLine1 ?? r.formattedAddress,
+        lat: r.latitude,
+        lng: r.longitude,
+        beds: r.bedrooms ?? null,
+        baths: r.bathrooms ?? null,
+        sqft: r.squareFootage ?? null,
+        lotSize: r.lotSize ?? null,
+        yearBuilt: r.yearBuilt ?? null,
+        type: r.propertyType ?? null,
+        assessed: assess?.value ?? null,
+        salePrice: r.lastSalePrice ?? null,
+        saleDate: r.lastSaleDate ?? null,
+        ownerName: r.owner?.names?.[0] ?? null,
+        ownerOccupied: r.ownerOccupied ?? null,
+        miles: Math.hypot((r.longitude - lng) * perLng, (r.latitude - lat) * 69.05),
+      };
+    })
+    .sort((x, y) => x.miles - y.miles);
 }
 
 export async function lookupEstimates(address: string, key: string): Promise<[string, string][]> {
