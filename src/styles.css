@@ -492,3 +492,8 @@ th[aria-sort='ascending'] .th-sort, th[aria-sort='descending'] .th-sort { color:
 .area-text { display: flex; flex-direction: column; align-items: flex-start; }
 .area-icon { flex: none; color: #14707f; }
 .area-tile:disabled .area-icon { color: #b3bac5; }
+/* Tiles keep their natural width (icon + full label) and wrap to a second row when the window is narrow. */
+.area-tiles { flex-wrap: wrap; overflow-x: visible; }
+.area-tile { flex: none; min-width: 0; }
+.area-text { white-space: nowrap; }
+.area-text b, .area-text span { overflow: visible; }
