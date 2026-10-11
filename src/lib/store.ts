@@ -154,7 +154,11 @@ export function useStore(): State {
 // Keys entered under Account win; .env values (VITE_GOOGLE_MAPS_API_KEY, VITE_RENTCAST_API_KEY) are the fallback.
 export const googleKey = (): string => state.settings.googleKey || import.meta.env.VITE_GOOGLE_MAPS_API_KEY || '';
 export const aiKey = (): string => state.settings.aiKey || import.meta.env.VITE_ANTHROPIC_API_KEY || '';
-export const dataKey = (): string => state.settings.dataKey || import.meta.env.VITE_RENTCAST_API_KEY || '';
+// Set at build time when the deployment has its own keys (see README, "Built-in keys").
+export const BUILT_IN_GOOGLE = !!import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+export const RENTCAST_PROXY: string = (import.meta.env.VITE_RENTCAST_PROXY_URL ?? '').replace(/\/$/, '');
+// With a proxy the real key stays on the server; this is then the optional access code.
+export const dataKey = (): string => state.settings.dataKey || (RENTCAST_PROXY ? 'proxy' : import.meta.env.VITE_RENTCAST_API_KEY || '');
 
 export const uid = () => Math.random().toString(36).slice(2, 10);
 export const today = () => new Date().toISOString().slice(0, 10);

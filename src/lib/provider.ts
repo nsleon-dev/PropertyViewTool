@@ -2,6 +2,8 @@
 // Backed by the RentCast API (https://developers.rentcast.io), which allows direct
 // browser calls, so no proxy or server is needed.
 
+import { RENTCAST_PROXY } from './store';
+
 export interface ExternalRecord {
   address: string;
   sections: { title: string; rows: [string, string][] }[];
@@ -26,9 +28,12 @@ const txt = (v: unknown) => (v == null || v === '' ? '—' : typeof v === 'numbe
 const day = (v: unknown) => (typeof v === 'string' ? new Date(v).toLocaleDateString() : '—');
 
 async function get(path: string, key: string): Promise<any> {
-  const res = await fetch(`https://api.rentcast.io/v1${path}`, { headers: { 'X-Api-Key': key, Accept: 'application/json' } });
+  // Through the proxy the key is added server-side and `key` is only the access code.
+  const res = RENTCAST_PROXY
+    ? await fetch(`${RENTCAST_PROXY}${path}`, { headers: { 'X-Access-Code': key } })
+    : await fetch(`https://api.rentcast.io/v1${path}`, { headers: { 'X-Api-Key': key, Accept: 'application/json' } });
   if (res.status === 404) return null;
-  if (res.status === 401 || res.status === 403) throw new Error('The property data key was rejected. Check it under Account.');
+  if (res.status === 401 || res.status === 403) throw new Error(RENTCAST_PROXY ? 'Property data needs the access code. Enter it under Account.' : 'The property data key was rejected. Check it under Account.');
   if (res.status === 429) throw new Error('The property data plan’s request limit has been reached.');
   if (!res.ok) throw new Error(`Property data request failed (${res.status}).`);
   return res.json();

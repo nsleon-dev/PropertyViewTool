@@ -9,6 +9,18 @@ https://nsleon-dev.github.io/PropertyViewTool/ — built and published by `.gith
 push to `main`. The site is static: API keys and saved data live only in each visitor's browser, and nothing
 from `.env.local` is used by the published build.
 
+## Built-in keys
+
+So visitors do not have to enter keys, and the keys are not shown on the Account page:
+
+- **Google Maps**: `gh secret set GOOGLE_MAPS_API_KEY`, then re-run the deploy. A Maps key is always readable
+  in the page's script, so restrict it in Google Cloud to `https://nsleon-dev.github.io/*` and to the Maps
+  JavaScript and Geocoding APIs.
+- **RentCast**: the key must not reach the browser. Deploy `worker/` to Cloudflare Workers (free):
+  `cd worker && npx wrangler deploy`, `npx wrangler secret put RENTCAST_API_KEY`, optionally
+  `npx wrangler secret put ACCESS_CODE`, then `gh variable set RENTCAST_PROXY_URL --body https://<worker-url>`
+  and re-run the deploy. Without an access code, anyone using the site can spend the RentCast quota.
+
 ## Run
 
 Requires Node 18+.

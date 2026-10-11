@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Modal, Stat, toast } from '../components/ui';
 import { allProperties } from '../lib/data';
 import { FILTERS, LEAD_LISTS } from '../lib/filters';
-import { PERMISSIONS, POSTCARD_COST, SKIP_COST, aiKey, dataKey, googleKey, resetAll, setState, uid, useStore, type Member } from '../lib/store';
+import { PERMISSIONS, POSTCARD_COST, SKIP_COST, BUILT_IN_GOOGLE, RENTCAST_PROXY, aiKey, dataKey, googleKey, resetAll, setState, uid, useStore, type Member } from '../lib/store';
 
 export function Account() {
   const { team, wallet, activity, settings } = useStore();
@@ -35,25 +35,43 @@ export function Account() {
 
       <div className="panel">
         <h3>Map &amp; Data Keys</h3>
-        <label className="field">
-          <span>Google Maps API key {googleKey() ? '· active' : '· not set (OpenStreetMap is shown instead)'}</span>
-          <input value={keys.googleKey} onChange={(e) => setKeys({ ...keys, googleKey: e.target.value.trim() })} placeholder="AIza…" autoComplete="off" spellCheck={false} />
-        </label>
-        <p className="muted">
-          Create one in the <a href="https://console.cloud.google.com/google/maps-apis" target="_blank" rel="noreferrer">Google Cloud console</a> with billing enabled, and turn on the
-          <b> Maps JavaScript API</b> and <b>Geocoding API</b> (used to read the address where you click).
-        </p>
-        <label className="field">
-          <span>Property data key (RentCast) {dataKey() ? '· active' : '· not set'}</span>
-          <input value={keys.dataKey} onChange={(e) => setKeys({ ...keys, dataKey: e.target.value.trim() })} placeholder="RentCast API key" autoComplete="off" spellCheck={false} />
-        </label>
-        <p className="muted">
-          Optional. With a key from <a href="https://www.rentcast.io/api" target="_blank" rel="noreferrer">rentcast.io/api</a>, clicking any spot on the map can pull the real public record for that
-          address. Each lookup uses one request from your RentCast plan; value and rent estimates use two.
-        </p>
+        {BUILT_IN_GOOGLE ? (
+          <p className="muted"><b>Google Maps</b> · built into this site. The key is restricted to this web address.</p>
+        ) : (
+          <>
+            <label className="field">
+              <span>Google Maps API key {googleKey() ? '· active' : '· not set (OpenStreetMap is shown instead)'}</span>
+              <input type="password" value={keys.googleKey} onChange={(e) => setKeys({ ...keys, googleKey: e.target.value.trim() })} placeholder="AIza…" autoComplete="off" spellCheck={false} />
+            </label>
+            <p className="muted">
+              Create one in the <a href="https://console.cloud.google.com/google/maps-apis" target="_blank" rel="noreferrer">Google Cloud console</a> with billing enabled, and turn on the
+              <b> Maps JavaScript API</b> and <b>Geocoding API</b> (used to read the address where you click).
+            </p>
+          </>
+        )}
+        {RENTCAST_PROXY ? (
+          <>
+            <label className="field">
+              <span>Property data access code</span>
+              <input type="password" value={keys.dataKey} onChange={(e) => setKeys({ ...keys, dataKey: e.target.value.trim() })} placeholder="Only needed if the site owner set one" autoComplete="off" spellCheck={false} />
+            </label>
+            <p className="muted"><b>Property data (RentCast)</b> · built into this site. The key is held on the server and never sent to this browser.</p>
+          </>
+        ) : (
+          <>
+            <label className="field">
+              <span>Property data key (RentCast) {dataKey() ? '· active' : '· not set'}</span>
+              <input type="password" value={keys.dataKey} onChange={(e) => setKeys({ ...keys, dataKey: e.target.value.trim() })} placeholder="RentCast API key" autoComplete="off" spellCheck={false} />
+            </label>
+            <p className="muted">
+              Optional. With a key from <a href="https://www.rentcast.io/api" target="_blank" rel="noreferrer">rentcast.io/api</a>, clicking any spot on the map can pull the real public record for that
+              address. Each lookup uses one request from your RentCast plan; value and rent estimates use two.
+            </p>
+          </>
+        )}
         <label className="field">
           <span>Anthropic API key (AI deal rating) {aiKey() ? '· active' : '· not set'}</span>
-          <input value={keys.aiKey ?? ''} onChange={(e) => setKeys({ ...keys, aiKey: e.target.value.trim() })} placeholder="sk-ant-…" autoComplete="off" spellCheck={false} />
+          <input type="password" value={keys.aiKey ?? ''} onChange={(e) => setKeys({ ...keys, aiKey: e.target.value.trim() })} placeholder="sk-ant-…" autoComplete="off" spellCheck={false} />
         </label>
         <p className="muted">
           Optional. With a key from <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noreferrer">console.anthropic.com</a>, the Intelligence tab can ask Claude to rate a
