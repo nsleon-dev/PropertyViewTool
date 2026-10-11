@@ -4,3 +4,6 @@ compatibility_date = "2026-01-01"
 
 [vars]
 ALLOWED_ORIGINS = "https://nsleon-dev.github.io,http://localhost:5173"
+FIREBASE_PROJECT_ID = "propertyview-d4815"
+# Comma-separated emails; leave empty to let every signed-in user run lookups.
+ALLOWED_EMAILS = ""
