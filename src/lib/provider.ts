@@ -26,7 +26,8 @@ export interface ExternalRecord {
 const cache = new Map<string, ExternalRecord | null>();
 const usd = (n: unknown) => (typeof n === 'number' ? `$${Math.round(n).toLocaleString()}` : '—');
 const txt = (v: unknown) => (v == null || v === '' ? '—' : typeof v === 'number' ? v.toLocaleString() : typeof v === 'boolean' ? (v ? 'Yes' : 'No') : String(v));
-const day = (v: unknown) => (typeof v === 'string' ? new Date(v).toLocaleDateString() : '—');
+// Sale dates arrive as midnight UTC; showing them in local time would shift them a day back.
+const day = (v: unknown) => (typeof v === 'string' ? new Date(v).toLocaleDateString(undefined, { timeZone: 'UTC' }) : '—');
 
 async function get(path: string, key: string): Promise<any> {
   const token = RENTCAST_PROXY ? await idToken() : null;
@@ -158,7 +159,15 @@ async function fetchNearby(lat: number, lng: number, key: string, radius: number
         miles: Math.hypot((r.longitude - lng) * perLng, (r.latitude - lat) * 69.05),
       };
     })
-    .sort((x, y) => x.miles - y.miles);
+    .sort((x, y) => x.miles - y.miles)
+    // The service sometimes lists one address twice; keep the copy with more filled in.
+    .reduce((list: Neighbor[], n) => {
+      const i = list.findIndex((x) => x.address === n.address);
+      const filled = (x: Neighbor) => [x.beds, x.baths, x.salePrice, x.saleDate, x.assessed].filter((v) => v != null).length;
+      if (i < 0) list.push(n);
+      else if (filled(n) > filled(list[i])) list[i] = n;
+      return list;
+    }, []);
 }
 
 export async function lookupEstimates(address: string, key: string): Promise<[string, string][]> {

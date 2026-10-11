@@ -60,7 +60,7 @@ export function LookupView({ lat, lng, address, onClose }: { lat: number; lng: n
   const estValue = amount(estimates?.find(([k]) => k === 'Estimated Value')?.[1] ?? null);
   const rent = amount(estimates?.find(([k]) => k === 'Estimated Rent')?.[1] ?? null);
   const salePrice = f?.lastSalePrice ?? amount(pick(rows, /sale.?price/i));
-  const saleDate = f?.lastSaleDate ? new Date(f.lastSaleDate).toLocaleDateString() : pick(rows, /sale.?date/i);
+  const saleDate = f?.lastSaleDate ? new Date(f.lastSaleDate).toLocaleDateString(undefined, { timeZone: 'UTC' }) : pick(rows, /sale.?date/i);
   const lot = f?.lotSize ? `${f.lotSize.toLocaleString()}` : pick(rows, /sq.? ?f(ee)?t|land.?size|stated ?area/i);
   const owner = rec?.owner ?? ext?.ownerName ?? null;
   const taxLike = rows.filter(([k]) => /value|tax|assess|exempt|district/i.test(k));
@@ -187,7 +187,7 @@ export function LookupView({ lat, lng, address, onClose }: { lat: number; lng: n
             {f && f.sales.length > 0 ? (
               <table className="table narrow">
                 <thead><tr><th>Date</th><th>Event</th><th className="r">Amount</th></tr></thead>
-                <tbody>{f.sales.map((s) => <tr key={s.date + s.event}><td>{new Date(s.date).toLocaleDateString()}</td><td>{s.event}</td><td className="r">{money(s.price)}</td></tr>)}</tbody>
+                <tbody>{f.sales.map((s) => <tr key={s.date + s.event}><td>{new Date(s.date).toLocaleDateString(undefined, { timeZone: 'UTC' })}</td><td>{s.event}</td><td className="r">{money(s.price)}</td></tr>)}</tbody>
               </table>
             ) : salePrice || saleDate ? <Fields rows={[['Last Sale Price', salePrice ? money(salePrice) : null], ['Last Sale Date', saleDate]]} /> : <p className="muted">This county's public layer does not include sales. {key ? 'Load the building & sales data on the Property Details tab.' : 'Sale history needs the optional property data key under Account.'} Mortgage records are not available from either source.</p>}
           </Section>

@@ -236,7 +236,7 @@ async function fetchList(lat: number, lng: number, zoom: number): Promise<Parcel
           lng: ring.reduce((t, p) => t + p[0], 0) / ring.length,
           address: r.address,
           owner: r.owner,
-          value: pick(r.rows, /total.*val|market.*val|just.*val|apprais.*val|assess.*(val|tot)|full cash|^parval|^tot.*val/i),
+          value: pick(r.rows, VALUE),
           id: pick(r.rows, /parcel ?(id|n)|^apn|^pin$|pams|parcelno|^parno/i),
         }];
       });
@@ -248,4 +248,36 @@ async function fetchList(lat: number, lng: number, zoom: number): Promise<Parcel
   }
   if (failure) throw failure;
   return { source: candidates[candidates.length - 1].name, items: [], capped: false };
+}
+
+// "1140 JILL" from "1140 Jill Dr W, West Fargo": enough to match one house across sources.
+export const houseKey = (a: string) => a.toUpperCase().match(/^\s*(\d+)\s+(?:[NSEW]\s+)?([A-Z0-9]+)/)?.slice(1).join(' ') ?? '';
+
+const VALUE = /total.*val|market.*val|just.*val|apprais.*val|assess.*(val|tot)|full cash|^parval|^tot.*val/i;
+const around = new Map<string, Promise<Map<string, { value: number | null; owner: string | null }>>>();
+
+// Assessed value and owner for every parcel within `miles` of a point, keyed by houseKey,
+// in one request to the public source. Used to fill in what other data sources lack.
+export function parcelValues(lat: number, lng: number, miles: number) {
+  const key = `${lat.toFixed(4)},${lng.toFixed(4)},${miles}`;
+  if (!around.has(key)) around.set(key, fetchValues(lat, lng, miles).catch((e) => (around.delete(key), Promise.reject(e))));
+  return around.get(key)!;
+}
+
+async function fetchValues(lat: number, lng: number, miles: number) {
+  const out = new Map<string, { value: number | null; owner: string | null }>();
+  const dy = miles / 69.05;
+  const dx = miles / (69.17 * Math.cos((lat * Math.PI) / 180));
+  for (const src of SOURCES.filter((s) => lng >= s.bbox[0] && lng <= s.bbox[2] && lat >= s.bbox[1] && lat <= s.bbox[3])) {
+    const data = await send(src, { geometry: `${lng - dx},${lat - dy},${lng + dx},${lat + dy}`, geometryType: 'esriGeometryEnvelope', inSR: '4326', spatialRel: 'esriSpatialRelIntersects', returnGeometry: 'false', resultRecordCount: '1000' }).catch(() => null);
+    if (!data?.features?.length) continue;
+    for (const feature of data.features) {
+      const r = toRecord(src, data, false, feature);
+      const k = r.address ? houseKey(r.address) : '';
+      const text = pick(r.rows, VALUE);
+      if (k && !out.has(k)) out.set(k, { value: text ? Number(text.replace(/[^0-9.]/g, '')) || null : null, owner: r.owner });
+    }
+    break;
+  }
+  return out;
 }
