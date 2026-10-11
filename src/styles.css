@@ -423,3 +423,4 @@ code { background: #e8ecf2; padding: 1px 5px; border-radius: 3px; }
 .login-links { display: flex; justify-content: space-between; margin-top: 14px; gap: 10px; flex-wrap: wrap; }
 .btn.google { padding: 9px 12px; gap: 10px; }
 .login-card .btn.block { margin-top: 6px; }
+.results-note { margin: 10px 10px 0; }

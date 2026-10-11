@@ -6,7 +6,7 @@ import type { ParcelRecord } from '../lib/parcels';
 import { MapView, googleReady, type MapPoint, type MapViewState } from '../components/MapView';
 import { AddToListModal, Empty, Icon, Modal, Tag, Thumb, toast } from '../components/ui';
 import { runSkipTrace } from '../lib/actions';
-import { allProperties, getProperty, type Property } from '../lib/data';
+import { allProperties, distanceMiles, getProperty, type Property } from '../lib/data';
 import { LEAD_LISTS, describeCriteria, matchesLocation, parseQuery, runSearch, suggest, type Location } from '../lib/filters';
 import { downloadCsv, money, num, propertyCsv, shortMoney, tags } from '../lib/format';
 import { setState, today, uid, useStore, type SearchState } from '../lib/store';
@@ -80,6 +80,7 @@ export function Search() {
   const [modal, setModal] = useState<'' | 'add' | 'save'>('');
   const [saveName, setSaveName] = useState('');
   const [moved, setMoved] = useState<[number, number, number, number] | null>(null);
+  const [center, setCenter] = useState<MapViewState | null>(memory.view);
   const [understood, setUnderstood] = useState<string[]>([]);
   const [outline, setOutline] = useState<ParcelRecord['outline'] | null>(null);
   const [showResults, setShowResults] = useState(memory.showResults);
@@ -87,6 +88,8 @@ export function Search() {
   const results = useMemo(() => runSearch(loc, criteria, leadLists).sort(SORTS[sort].fn), [loc, criteria, leadLists, sort]);
   const fitKey = JSON.stringify([loc, criteria, leadLists]);
   // Same search as last time: reopen the map where it was left instead of refitting.
+  // The list is the sample dataset for the searched location; the map can be anywhere.
+  const elsewhere = useMemo(() => !!center && results.length > 0 && !results.some((p) => distanceMiles(center, p) < 40), [center, results]);
   const [initialView] = useState(() => (memory.key === fitKey ? memory.view : null));
   useEffect(() => {
     setMoved(null);
@@ -273,7 +276,7 @@ export function Search() {
             outline={outline}
             panTo={inspect?.kind === 'spot' && inspect.address ? { lat: inspect.lat, lng: inspect.lng, zoom: 18 } : focusProp ?? null}
             initialView={initialView}
-            onView={rememberView}
+            onView={(v) => { rememberView(v); setCenter(v); }}
           />
           {inspect && <InfoPanel focus={inspect} onClose={() => setInspect(null)} isSelected={(id) => selected.has(id)} onToggle={toggle} onOpenRecord={(id) => setInspect({ kind: 'record', id })} onParcel={setOutline} />}
           <button className="results-toggle" onClick={() => setShowResults(!showResults)} aria-expanded={showResults} title={showResults ? 'Hide results list' : 'Show results list'}>
@@ -294,6 +297,11 @@ export function Search() {
         </div>
 
         <section className="results" hidden={!showResults}>
+          {elsewhere && (
+            <p className="info-hint results-note">
+              This list is the sample data for <b>{loc.label}</b>, not the area on the map. There is no sample data where the map is now; click any lot on the map to see its real record.
+            </p>
+          )}
           <div className="results-head">
             <div>
               <strong>{results.length.toLocaleString()}</strong> {results.length === 1 ? 'property' : 'properties'}
