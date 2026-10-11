@@ -48,7 +48,7 @@ export function App() {
         ))}
         <div className="rail-spacer" />
         <NavLink to="/account" className={({ isActive }) => `rail-item${isActive ? ' active' : ''}`}>
-          <Icon name="person" size={22} />
+          {user?.photoURL ? <img className="rail-avatar" src={user.photoURL} alt="" referrerPolicy="no-referrer" /> : <Icon name="person" size={22} />}
           <span>Account</span>
           <span className="wallet">${wallet.toFixed(2)}</span>
         </NavLink>

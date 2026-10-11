@@ -424,3 +424,4 @@ code { background: #e8ecf2; padding: 1px 5px; border-radius: 3px; }
 .btn.google { padding: 9px 12px; gap: 10px; }
 .login-card .btn.block { margin-top: 6px; }
 .results-note { margin: 10px 10px 0; }
+.rail-avatar { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; }

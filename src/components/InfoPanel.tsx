@@ -4,6 +4,7 @@ import { runSkipTrace } from '../lib/actions';
 import { allProperties, distanceMiles, getProperty, type Property } from '../lib/data';
 import { date, money, num, tags } from '../lib/format';
 import { coveredAreas, lookupParcel, type ParcelRecord, type ParcelResult } from '../lib/parcels';
+import { usePlace } from '../lib/place';
 import { lookupEstimates, lookupRecord, type ExternalRecord } from '../lib/provider';
 import { dataKey, setState, spotId, uid, useStore } from '../lib/store';
 import { StreetView } from './GoogleMap';
@@ -117,6 +118,7 @@ function SpotInfo({ lat, lng, known, onOpenRecord, onParcel }: { lat: number; ln
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lat, lng]);
   const pub = typeof parcel === 'object' && parcel.status === 'found' ? parcel.record : null;
+  const place = usePlace(lat, lng);
 
   useEffect(() => {
     let live = true;
@@ -195,6 +197,9 @@ function SpotInfo({ lat, lng, known, onOpenRecord, onParcel }: { lat: number; ln
             )}
           </>
         )}
+
+        <h3>Location Facts</h3>
+        {!place ? <p className="muted">Looking up flood zone and districts…</p> : place.length ? <Rows rows={place} /> : <p className="muted">No location facts could be loaded.</p>}
 
         <h3>Building, Sales &amp; Estimates</h3>
         <label className="field">

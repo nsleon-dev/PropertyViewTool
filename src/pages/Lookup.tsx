@@ -8,6 +8,7 @@ import { Empty, Icon, Modal, StarButton, toast } from '../components/ui';
 import { areaContext } from '../lib/ai';
 import { money } from '../lib/format';
 import { coveredAreas, lookupParcel, pick, type ParcelResult } from '../lib/parcels';
+import { usePlace } from '../lib/place';
 import { lookupEstimates, lookupRecord, type ExternalRecord } from '../lib/provider';
 import { LEAD_STATUSES, dataKey, setState, spotId, uid, useStore } from '../lib/store';
 
@@ -34,6 +35,7 @@ export function Lookup() {
   const [estimates, setEstimates] = useState<[string, string][] | null>(null);
   const [busy, setBusy] = useState(false);
   const [tagging, setTagging] = useState(false);
+  const place = usePlace(lat, lng);
 
   useEffect(() => {
     let live = true;
@@ -129,6 +131,9 @@ export function Lookup() {
               </div>
               <div className="mini-map"><MapView points={[{ id, lat, lng, color: '#f26b21', label: title, big: true }]} fitKey={id} outline={rec?.outline} quiet /></div>
             </div>
+            <Section title="Location Facts" aside={<span className="muted">FEMA · Census · USGS</span>}>
+              {!place ? <p className="muted">Looking up flood zone and districts…</p> : place.length ? <Fields rows={place} /> : <p className="muted">No location facts could be loaded.</p>}
+            </Section>
             <Section title="Building, Sales & Estimates" aside={key && <span className="row no-print"><button className="btn sm primary" disabled={busy} onClick={() => load('record')}>{busy ? 'Loading…' : 'Load Building & Sales Data'}</button><button className="btn sm" disabled={busy} onClick={() => load('estimates')}>Value &amp; Rent Estimate</button></span>}>
               {!key && <p className="muted">Bedrooms, bathrooms, living area, sale history and value/rent estimates come from the optional property data key under <Link to="/account">Account</Link>. County assessor layers do not publish them.</p>}
               {estimates && <Fields rows={estimates} />}
@@ -149,6 +154,7 @@ export function Lookup() {
                 building: f ? { ...f, sales: f.sales.slice(0, 10) } : null,
                 estimates: estimates ? Object.fromEntries(estimates) : null,
                 mortgagesAndLiens: null,
+                location: place ? Object.fromEntries(place) : null,
                 neighbourhood: await areaContext(lat, lng),
               })}
             />

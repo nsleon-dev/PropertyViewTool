@@ -56,13 +56,15 @@ Enter keys in the app under **Account > Map & Data Keys**, or copy `.env.example
 
 ## Public parcel records
 
-Clicking a spot on the map (or searching a street address) reads the assessor's public parcel record
-for that lot directly from county / state GIS services: owner of record, mailing address, parcel ID,
-legal description, assessed values, zoning and lot size, plus the parcel boundary. No key is needed.
+Clicking a lot (or searching an address) reads the free public parcel record for it, keyless
+(`src/lib/parcels.ts`). Sources are a few county assessor layers plus statewide layers published by state GIS
+offices for 31 states: AK, AR, CA, CO, CT, DE, FL, IA, ID, IN, MA, MD, ME, MN, MT, NC, ND, NE, NH, NJ, NV, NY,
+OH, RI, UT, VA, VT, WA, WI, WV, WY. Content varies by state: some carry owner and values, some only the parcel
+number and boundary, and a few cover only participating counties. No free statewide layer was found for the
+other states; add a county layer to `SOURCES` to cover one.
 
-Coverage is the list in `src/lib/parcels.ts` (currently West Fargo and Cass County ND, Maricopa County AZ,
-Franklin County OH, and North Carolina statewide). To add an area, find its public ArcGIS parcel layer
-and add one line with its URL and bounding box. Fields vary by county; whatever the layer publishes is shown.
+Every US location also gets **Location Facts** (`src/lib/place.ts`): FEMA flood zone, city, county, school
+district (Census TIGERweb) and elevation (USGS).
 
 ## Property view
 
