@@ -480,7 +480,7 @@ th[aria-sort='ascending'] .th-sort, th[aria-sort='descending'] .th-sort { color:
 .draw-bar .btn.primary { background: var(--orange); }
 .draw-hint { background: #14707f; color: #fff; border-radius: 999px; padding: 7px 14px; font-size: 13px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
 .area-tiles { display: flex; gap: 8px; padding: 8px 14px; overflow-x: auto; background: var(--panel); border-bottom: 1px solid var(--line); flex: none; }
-.area-tile { display: flex; flex-direction: column; align-items: flex-start; min-width: 104px; padding: 6px 12px; border: 1px solid var(--line); border-radius: 8px; background: #fff; cursor: pointer; white-space: nowrap; color: var(--text); }
+.area-tile { display: flex; flex-direction: row; align-items: center; gap: 10px; min-width: 104px; padding: 6px 12px; border: 1px solid var(--line); border-radius: 8px; background: #fff; cursor: pointer; white-space: nowrap; color: var(--text); }
 .area-tile b { font-size: 18px; line-height: 1.2; }
 .area-tile span { font-size: 11px; color: var(--muted); }
 .area-tile:hover:not(:disabled) { border-color: #14707f; }
@@ -489,3 +489,6 @@ th[aria-sort='ascending'] .th-sort, th[aria-sort='descending'] .th-sort { color:
 .draw-overlay { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1001; cursor: crosshair; touch-action: none; user-select: none; }
 .draw-bar { z-index: 1002; }
 .draw-bar .btn.on { background: #14707f; border-color: #14707f; color: #fff; }
+.area-text { display: flex; flex-direction: column; align-items: flex-start; }
+.area-icon { flex: none; color: #14707f; }
+.area-tile:disabled .area-icon { color: #b3bac5; }
