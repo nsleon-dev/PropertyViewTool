@@ -425,3 +425,16 @@ code { background: #e8ecf2; padding: 1px 5px; border-radius: 3px; }
 .login-card .btn.block { margin-top: 6px; }
 .results-note { margin: 10px 10px 0; }
 .rail-avatar { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; }
+
+/* Real parcels in view */
+.parcel-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; text-align: left; border: 1px solid var(--line); background: var(--panel); border-radius: 6px; padding: 8px 10px; cursor: pointer; flex: none; }
+.parcel-row:hover { border-color: var(--orange); }
+.parcel-main { display: flex; flex-direction: column; min-width: 0; }
+.parcel-main b, .parcel-main span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.parcel-main b { color: var(--blue); }
+.parcel-main span { font-size: 12px; }
+.parcel-value { font-weight: 600; white-space: nowrap; }
+.results-foot { padding: 6px 12px; font-size: 12px; border-top: 1px solid var(--line); background: var(--panel); }
+.sample-bar { border-top: 1px solid var(--line); border-bottom: 0; font-size: 13px; }
+.results-list { gap: 6px; }
+.info-star + .info-body { padding-top: 46px; }

@@ -129,8 +129,7 @@ async function queryAddress(src: Source, address: string, lat: number, lng: numb
   return data.features?.length ? data : null;
 }
 
-function toRecord(src: Source, data: ArcResponse, nearest: boolean): ParcelRecord {
-  const feature = data.features![0];
+function toRecord(src: Source, data: ArcResponse, nearest: boolean, feature = data.features![0]): ParcelRecord {
   const rows: [string, string][] = [];
   const links: ParcelRecord['links'] = [];
   let owner: string | null = null;
@@ -189,4 +188,64 @@ async function fetchParcel(lat: number, lng: number, address?: string): Promise<
   }
   if (failure) throw failure;
   return { status: 'empty', source: candidates[candidates.length - 1].name };
+}
+
+export interface ParcelItem {
+  key: string;
+  lat: number;
+  lng: number;
+  address: string | null;
+  owner: string | null;
+  value: string | null;
+  id: string | null;
+}
+export interface ParcelList {
+  source: string | null; // null when no source covers the area
+  items: ParcelItem[];
+  capped: boolean;
+}
+const LIST_MAX = 200;
+const lists = new Map<string, Promise<ParcelList>>();
+
+// Parcels around the centre of the map view, from the first source that has any there.
+export function listParcels(lat: number, lng: number, zoom: number): Promise<ParcelList> {
+  const key = `${lat.toFixed(4)},${lng.toFixed(4)},${zoom}`;
+  if (!lists.has(key)) lists.set(key, fetchList(lat, lng, zoom).catch((e) => (lists.delete(key), Promise.reject(e))));
+  return lists.get(key)!;
+}
+
+async function fetchList(lat: number, lng: number, zoom: number): Promise<ParcelList> {
+  const candidates = SOURCES.filter((s) => lng >= s.bbox[0] && lng <= s.bbox[2] && lat >= s.bbox[1] && lat <= s.bbox[3]);
+  if (!candidates.length) return { source: null, items: [], capped: false };
+  // Roughly the visible map: about 460px either side of the centre at this zoom.
+  const dx = (360 / 2 ** zoom) * 1.8;
+  const dy = dx * Math.cos((lat * Math.PI) / 180) * 0.8;
+  let failure: unknown = null;
+  for (const src of candidates) {
+    try {
+      const data = await send(src, { geometry: `${lng - dx},${lat - dy},${lng + dx},${lat + dy}`, geometryType: 'esriGeometryEnvelope', inSR: '4326', spatialRel: 'esriSpatialRelIntersects', maxAllowableOffset: '0.00002', resultRecordCount: String(LIST_MAX) });
+      const features = data.features ?? [];
+      if (!features.length) continue;
+      const items = features.flatMap((feature, i): ParcelItem[] => {
+        const ring = feature.geometry?.rings?.[0];
+        if (!ring?.length) return [];
+        const r = toRecord(src, data, false, feature);
+        return [{
+          key: `${src.url}#${i}`,
+          lat: ring.reduce((t, p) => t + p[1], 0) / ring.length,
+          lng: ring.reduce((t, p) => t + p[0], 0) / ring.length,
+          address: r.address,
+          owner: r.owner,
+          value: pick(r.rows, /total.*val|market.*val|just.*val|apprais.*val|assess.*(val|tot)|full cash|^parval|^tot.*val/i),
+          id: pick(r.rows, /parcel ?(id|n)|^apn|^pin$|pams|parcelno|^parno/i),
+        }];
+      });
+      items.sort((a, b) => (a.address ?? a.id ?? '~').localeCompare(b.address ?? b.id ?? '~', undefined, { numeric: true }));
+      return { source: src.name, items, capped: features.length >= LIST_MAX };
+    } catch (e) {
+      failure = e;
+    }
+  }
+  if (failure) throw failure;
+  return { source: candidates[candidates.length - 1].name, items: [], capped: false };
 }

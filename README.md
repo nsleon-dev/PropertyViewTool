@@ -63,6 +63,9 @@ OH, RI, UT, VA, VT, WA, WI, WV, WY. Content varies by state: some carry owner an
 number and boundary, and a few cover only participating counties. No free statewide layer was found for the
 other states; add a county layer to `SOURCES` to cover one.
 
+The right-hand panel on the Search page lists the real parcels in the map view once zoomed to street level
+(zoom 16+), from the same sources.
+
 Every US location also gets **Location Facts** (`src/lib/place.ts`): FEMA flood zone, city, county, school
 district (Census TIGERweb) and elevation (USGS).
 

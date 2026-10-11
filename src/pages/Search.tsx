@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { ParcelList } from '../components/ParcelList';
 import { FilterPanel } from '../components/FilterPanel';
 import { InfoPanel, type Focus } from '../components/InfoPanel';
 import type { ParcelRecord } from '../lib/parcels';
@@ -280,7 +281,7 @@ export function Search() {
           />
           {inspect && <InfoPanel focus={inspect} onClose={() => setInspect(null)} isSelected={(id) => selected.has(id)} onToggle={toggle} onOpenRecord={(id) => setInspect({ kind: 'record', id })} onParcel={setOutline} />}
           <button className="results-toggle" onClick={() => setShowResults(!showResults)} aria-expanded={showResults} title={showResults ? 'Hide results list' : 'Show results list'}>
-            {showResults ? '›' : `‹ ${results.length.toLocaleString()}`}
+            {showResults ? '›' : '‹ Parcels'}
           </button>
           {moved && (
             <button className="btn primary map-redo" onClick={() => update({ loc: { kind: 'bounds', value: moved.join(','), label: 'Map area', bounds: moved } })}>
@@ -297,63 +298,15 @@ export function Search() {
         </div>
 
         <section className="results" hidden={!showResults}>
-          {elsewhere && (
-            <p className="info-hint results-note">
-              This list is the sample data for <b>{loc.label}</b>, not the area on the map. There is no sample data where the map is now; click any lot on the map to see its real record.
-            </p>
-          )}
-          <div className="results-head">
-            <div>
-              <strong>{results.length.toLocaleString()}</strong> {results.length === 1 ? 'property' : 'properties'}
-              {selected.size > 0 && <span className="muted"> · {selected.size.toLocaleString()} selected</span>}
-            </div>
-            <select value={sort} onChange={(e) => setSort(e.target.value)} aria-label="Sort results">
-              {Object.entries(SORTS).map(([k, s]) => <option key={k} value={k}>{s.label}</option>)}
-            </select>
-          </div>
-          <div className="results-actions">
-            <label className="check">
-              <input type="checkbox" checked={results.length > 0 && selected.size === results.length} onChange={(e) => setSelected(e.target.checked ? new Set(results.map((p) => p.id)) : new Set())} />
-              Select all
-            </label>
-            {selected.size > 0 && <button className="link" onClick={() => setSelected(new Set())}>Clear</button>}
-            <button className="btn sm primary" disabled={!results.length} onClick={() => setModal('add')}>Save to List</button>
-            <button className="btn sm" disabled={!results.length} onClick={() => { const r = runSkipTrace(actionIds); toast(r.msg); }}>Skip Trace</button>
+          <ParcelList view={center} onOpen={(p) => setInspect({ kind: 'spot', lat: p.lat, lng: p.lng })} />
+          <div className="results-actions sample-bar">
+            <span className="muted" title="The orange pins are the built-in sample dataset, used by lead lists, filters and marketing lists">
+              Sample pins: <b>{results.length.toLocaleString()}</b>{selected.size > 0 && ` · ${selected.size.toLocaleString()} selected`}
+            </span>
+            <span className="grow" />
+            <button className="btn sm" disabled={!results.length} onClick={() => setModal('add')}>Save to List</button>
             <button className="btn sm" disabled={!results.length} onClick={() => downloadCsv('properties.csv', propertyCsv(results.filter((p) => !selected.size || selected.has(p.id)), skip))}>Export</button>
           </div>
-          <div className="results-list">
-            {!results.length && <Empty title="No properties match">Loosen a filter, remove a lead list, or search a wider area.</Empty>}
-            {pageRows.map((p) => (
-              <article key={p.id} id={`card-${p.id}`} className={`card${hover === p.id || focusId === p.id ? ' hover' : ''}${selected.has(p.id) ? ' picked' : ''}`} onMouseEnter={() => setHover(p.id)} onMouseLeave={() => setHover(null)}>
-                <label className="card-check" title="Select">
-                  <input type="checkbox" checked={selected.has(p.id)} onChange={() => toggle(p.id)} aria-label={`Select ${p.address}`} />
-                </label>
-                <button className="card-main" onClick={() => setInspect({ kind: 'record', id: p.id })}>
-                  <Thumb p={p} />
-                  <div className="card-info">
-                    <div className="card-addr">{p.address}</div>
-                    <div className="muted">{p.city}, {p.state} {p.zip}</div>
-                    <div className="card-facts">
-                      {p.type === 'Vacant Land' ? `${num(p.lotSqft)} sq ft lot` : `${p.beds} bd · ${p.baths} ba · ${num(p.sqft)} sq ft`} · {p.type}
-                    </div>
-                    <div className="card-money">
-                      <span><b>{money(p.estValue)}</b> est. value</span>
-                      <span className={p.equity < 0 ? 'neg' : ''}><b>{p.equityPct}%</b> equity</span>
-                    </div>
-                    <div className="tags">{tags(p).slice(0, 4).map((t) => <Tag key={t.text} {...t} />)}</div>
-                  </div>
-                </button>
-                <Link className="card-open" to={`/property/${p.id}`} title="Open full details" aria-label={`Open full details for ${p.address}`}>›</Link>
-              </article>
-            ))}
-          </div>
-          {pages > 1 && (
-            <div className="pager">
-              <button className="btn sm" disabled={page === 0} onClick={() => setPage(page - 1)}>‹ Prev</button>
-              <span>Page {page + 1} of {pages.toLocaleString()}</span>
-              <button className="btn sm" disabled={page >= pages - 1} onClick={() => setPage(page + 1)}>Next ›</button>
-            </div>
-          )}
         </section>
       </div>
 
