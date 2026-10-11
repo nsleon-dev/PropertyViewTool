@@ -4,7 +4,7 @@ import { AUTH_ENABLED, signOut, useAuth } from '../lib/auth';
 import { setTheme, useTheme, type Theme } from '../lib/theme';
 import { allProperties } from '../lib/data';
 import { FILTERS, LEAD_LISTS } from '../lib/filters';
-import { PERMISSIONS, POSTCARD_COST, SKIP_COST, BUILT_IN_GOOGLE, RENTCAST_PROXY, aiKey, dataKey, googleKey, resetAll, setState, uid, useStore, type Member } from '../lib/store';
+import { PERMISSIONS, POSTCARD_COST, SKIP_COST, BUILT_IN_GOOGLE, RENTCAST_PROXY, aiKey, setDataPaused, dataKey, googleKey, resetAll, setState, uid, useStore, type Member } from '../lib/store';
 
 export function Account() {
   const { team, wallet, activity, settings } = useStore();
@@ -63,6 +63,14 @@ export function Account() {
 
       <div className="panel">
         <h3>Map &amp; Data Keys</h3>
+        <label className="check switch-row">
+          <input type="checkbox" checked={!settings.dataOff} onChange={(e) => { setDataPaused(!e.target.checked); setKeys((k) => ({ ...k, dataOff: !e.target.checked })); }} />
+          <span><b>Use RentCast property data</b> · {settings.dataOff ? 'paused: no requests are being made' : 'on'}</span>
+        </label>
+        <p className="muted">
+          Turn this off to stop using your monthly RentCast requests. Beds, baths, sale history, value estimates and MLS listings are hidden while it is off; public records, maps and
+          everything else keep working. Applies to your account in this browser.
+        </p>
         {BUILT_IN_GOOGLE ? (
           <p className="muted"><b>Google Maps</b> · built into this site. The key is restricted to this web address.</p>
         ) : (

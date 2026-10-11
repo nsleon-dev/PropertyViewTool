@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { money } from '../lib/format';
 import { houseKey, listParcels, lookupParcel, parcelValues, pick, type ParcelItem, type ParcelRecord } from '../lib/parcels';
 import { lookupEstimates, lookupNearby, type Neighbor } from '../lib/provider';
-import { dataKey, spotId } from '../lib/store';
+import { dataKey, dataPaused, setDataPaused, spotId, useStore } from '../lib/store';
 import { StreetView } from './GoogleMap';
 import { useGoogleReady } from './MapView';
 import { Icon, StarButton } from './ui';
@@ -56,6 +56,7 @@ const COLS: { key: Col; label: string; num?: boolean }[] = [
 // The searched or clicked property with the properties around it: a summary card on top
 // and a neighbours table below. Addresses open the full details pop-up.
 export function SubjectPanel({ lat, lng, known, onClose, onOpen, onParcel }: Props) {
+  useStore(); // re-render when property data is paused or resumed
   const key = dataKey();
   const hasGoogle = useGoogleReady();
   const [address, setAddress] = useState(known ?? '');
@@ -209,7 +210,9 @@ export function SubjectPanel({ lat, lng, known, onClose, onOpen, onParcel }: Pro
           </tbody>
         </table>
         {key && near && !others.length && !note && <p className="muted pad">No nearby properties were returned for this spot.</p>}
-        {!key && <p className="muted pad">Beds, baths and sale history come from the property data service, which is not set up in this browser. Showing public parcel records only.</p>}
+        {!key && (dataPaused()
+          ? <p className="muted pad">RentCast property data is paused, so beds, baths and sale history are hidden and no requests are used. <button className="link" onClick={() => setDataPaused(false)}>Turn it back on</button></p>
+          : <p className="muted pad">Beds, baths and sale history come from the property data service, which is not set up in this browser. Showing public parcel records only.</p>)}
       </div>
     </div>
   );

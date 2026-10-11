@@ -84,7 +84,7 @@ export interface State {
   wallet: number;
   starred: Starred[];
   ratings: Record<string, Rating>;
-  settings: { googleKey: string; dataKey: string; aiKey?: string };
+  settings: { googleKey: string; dataKey: string; aiKey?: string; dataOff?: boolean };
   activity: { t: number; msg: string }[];
 }
 
@@ -180,7 +180,10 @@ export const RENTCAST_PROXY: string = (import.meta.env.VITE_RENTCAST_PROXY_URL ?
 // AI rating: a personal key entered under Account, else the site's own server when there is one.
 export const aiKey = (): string => state.settings.aiKey || import.meta.env.VITE_ANTHROPIC_API_KEY || (RENTCAST_PROXY ? 'proxy' : '');
 // With a proxy the real key stays on the server; this is then the optional access code.
-export const dataKey = (): string => state.settings.dataKey || (RENTCAST_PROXY ? 'proxy' : import.meta.env.VITE_RENTCAST_API_KEY || '');
+// `dataOff` pauses every paid property-data request without removing the key.
+export const dataKey = (): string => (state.settings.dataOff ? '' : state.settings.dataKey || (RENTCAST_PROXY ? 'proxy' : import.meta.env.VITE_RENTCAST_API_KEY || ''));
+export const dataPaused = (): boolean => !!state.settings.dataOff;
+export const setDataPaused = (off: boolean) => setState((s) => ({ settings: { ...s.settings, dataOff: off } }));
 
 export const uid = () => Math.random().toString(36).slice(2, 10);
 export const today = () => new Date().toISOString().slice(0, 10);

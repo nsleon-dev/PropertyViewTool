@@ -561,3 +561,4 @@ th[aria-sort='ascending'] .th-sort, th[aria-sort='descending'] .th-sort { color:
 .btn.primary, .btn.violet, .seg button.on, .draw-bar .btn.on, .draw-hint { color: #fff; }
 :root[data-theme='dark'] .btn.primary:hover { background: #d85a14; }
 :root[data-theme='dark'] .draw-bar .btn:not(.on):not(.primary), :root[data-theme='dark'] .subject-photo-actions .btn, :root[data-theme='dark'] .info-close, :root[data-theme='dark'] .subject-close, :root[data-theme='dark'] .info-star, :root[data-theme='dark'] .subject-star { color: var(--text); }
+.switch-row { margin: 4px 0; }
