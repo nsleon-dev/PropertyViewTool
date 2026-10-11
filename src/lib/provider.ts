@@ -183,3 +183,25 @@ export async function lookupEstimates(address: string, key: string): Promise<[st
     ['Rent Range', rent ? `${usd(rent.rentRangeLow)} – ${usd(rent.rentRangeHigh)}` : '—'],
   ];
 }
+
+export interface Listing {
+  address: string;
+  street: string;
+  lat: number;
+  lng: number;
+  price: number | null;
+  beds: number | null;
+  baths: number | null;
+  sqft: number | null;
+  type: string | null;
+  daysOnMarket: number | null;
+  listed: string | null;
+}
+
+// Active for-sale listings within `radius` miles, in one request.
+export async function lookupListings(lat: number, lng: number, radius: number, key: string): Promise<Listing[]> {
+  const data = await get(`/listings/sale?latitude=${lat}&longitude=${lng}&radius=${Math.min(100, radius).toFixed(2)}&status=Active&limit=500`, key);
+  return (Array.isArray(data) ? data : [])
+    .filter((r: any) => typeof r.latitude === 'number' && typeof r.longitude === 'number')
+    .map((r: any): Listing => ({ address: r.formattedAddress ?? '', street: r.addressLine1 ?? r.formattedAddress ?? '', lat: r.latitude, lng: r.longitude, price: r.price ?? null, beds: r.bedrooms ?? null, baths: r.bathrooms ?? null, sqft: r.squareFootage ?? null, type: r.propertyType ?? null, daysOnMarket: r.daysOnMarket ?? null, listed: r.listedDate ?? null }));
+}

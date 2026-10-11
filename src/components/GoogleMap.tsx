@@ -41,7 +41,8 @@ const dot = (color: string, big?: boolean): google.maps.Symbol => ({
   strokeWeight: big ? 3 : 1.5,
 });
 
-export function GoogleMap({ points, activeId, fitKey, onPick, onMove, onMapClick, pin, panTo, initialView, onView, outline }: MapProps) {
+export function GoogleMap({ points, activeId, fitKey, onPick, onMove, onMapClick, pin, panTo, initialView, onView, outline, area }: MapProps) {
+  const perimeter = useRef<{ setMap(m: google.maps.Map | null): void }[]>([]);
   const el = useRef<HTMLDivElement>(null);
   const map = useRef<google.maps.Map | null>(null);
   const markers = useRef(new Map<string, { m: google.maps.Marker; color: string }>());
@@ -157,6 +158,16 @@ export function GoogleMap({ points, activeId, fitKey, onPick, onMove, onMapClick
     shape.current?.setMap(null);
     shape.current = outline?.length ? new google.maps.Polygon({ paths: outline, map: map.current, strokeColor: '#f26b21', strokeWeight: 3, fillColor: '#f26b21', fillOpacity: 0.15, clickable: false }) : null;
   }, [outline]);
+
+  useEffect(() => {
+    perimeter.current.forEach((x) => x.setMap(null));
+    perimeter.current = [];
+    if (!area?.ring.length) return;
+    const line = { map: map.current, strokeColor: '#14707f', strokeWeight: 3, clickable: false };
+    perimeter.current.push(area.closed ? new google.maps.Polygon({ ...line, paths: area.ring, fillColor: '#14707f', fillOpacity: 0.08 }) : new google.maps.Polyline({ ...line, path: area.ring }));
+    if (!area.closed)
+      area.ring.forEach((position) => perimeter.current.push(new google.maps.Marker({ position, map: map.current, clickable: false, icon: { path: google.maps.SymbolPath.CIRCLE, scale: 5, fillColor: '#fff', fillOpacity: 1, strokeColor: '#14707f', strokeWeight: 2 } })));
+  }, [area]);
 
   useEffect(() => {
     if (panTo)

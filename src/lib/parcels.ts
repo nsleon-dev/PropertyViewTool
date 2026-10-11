@@ -70,6 +70,7 @@ interface ArcField {
 interface ArcResponse {
   error?: { message?: string };
   fields?: ArcField[];
+  exceededTransferLimit?: boolean;
   features?: { attributes: Record<string, unknown>; geometry?: { rings?: number[][][] } }[];
 }
 
@@ -94,7 +95,9 @@ function format(f: ArcField, v: unknown): string {
 
 async function send(src: Source, extra: Record<string, string>): Promise<ArcResponse> {
   const params = new URLSearchParams({ f: 'json', outSR: '4326', outFields: '*', returnGeometry: 'true', ...extra });
-  const res = await fetch(`${src.url}/query?${params}`, { signal: AbortSignal.timeout(20000) });
+  // A drawn perimeter makes the query too long for a URL.
+  const long = params.toString().length > 1500;
+  const res = await fetch(long ? `${src.url}/query` : `${src.url}/query?${params}`, { signal: AbortSignal.timeout(30000), ...(long ? { method: 'POST', body: params } : {}) });
   if (!res.ok) throw new Error(`${src.name} did not respond (${res.status}).`);
   const data: ArcResponse = await res.json();
   if (data.error) throw new Error(`${src.name}: ${data.error.message ?? 'query failed'}`);
@@ -280,4 +283,43 @@ async function fetchValues(lat: number, lng: number, miles: number) {
     break;
   }
   return out;
+}
+
+export interface AreaParcel {
+  lat: number;
+  lng: number;
+  record: ParcelRecord;
+}
+const AREA_MAX = 3000;
+
+// Every parcel inside a drawn perimeter, from the first source that has any there.
+export async function parcelsInArea(ring: { lat: number; lng: number }[]): Promise<{ source: string | null; parcels: AreaParcel[]; capped: boolean }> {
+  const lat = ring.reduce((t, p) => t + p.lat, 0) / ring.length;
+  const lng = ring.reduce((t, p) => t + p.lng, 0) / ring.length;
+  const candidates = SOURCES.filter((s) => lng >= s.bbox[0] && lng <= s.bbox[2] && lat >= s.bbox[1] && lat <= s.bbox[3]);
+  if (!candidates.length) return { source: null, parcels: [], capped: false };
+  const geometry = JSON.stringify({ rings: [[...ring, ring[0]].map((p) => [p.lng, p.lat])], spatialReference: { wkid: 4326 } });
+  let failure: unknown = null;
+  for (const src of candidates) {
+    try {
+      const parcels: AreaParcel[] = [];
+      let more = true;
+      while (more && parcels.length < AREA_MAX) {
+        const data = await send(src, { geometry, geometryType: 'esriGeometryPolygon', inSR: '4326', spatialRel: 'esriSpatialRelIntersects', maxAllowableOffset: '0.0001', resultOffset: String(parcels.length), resultRecordCount: '1000' });
+        const features = data.features ?? [];
+        for (const feature of features) {
+          const first = feature.geometry?.rings?.[0];
+          if (!first?.length) continue;
+          const record = toRecord(src, data, false, feature);
+          parcels.push({ lat: first.reduce((t, p) => t + p[1], 0) / first.length, lng: first.reduce((t, p) => t + p[0], 0) / first.length, record: { ...record, outline: [] } });
+        }
+        more = !!data.exceededTransferLimit && features.length > 0;
+      }
+      if (parcels.length) return { source: src.name, parcels, capped: more };
+    } catch (e) {
+      failure = e;
+    }
+  }
+  if (failure) throw failure;
+  return { source: candidates[candidates.length - 1].name, parcels: [], capped: false };
 }

@@ -1,11 +1,11 @@
-// Holds the RentCast key so it never reaches the browser. Forwards only the three
+// Holds the RentCast key so it never reaches the browser. Forwards only the four
 // read-only endpoints the app uses, only for the allowed sites, and only for callers
 // who pass the checks that are configured:
 //   FIREBASE_PROJECT_ID (var)  - require a signed-in user with a verified email
 //   ALLOWED_EMAILS (var)       - comma-separated; if set, only these users
 //   ACCESS_CODE (secret)       - a shared code, for deployments without sign-in
 // Secret: RENTCAST_API_KEY (required).
-const PATHS = /^\/(properties|avm\/value|avm\/rent\/long-term)$/;
+const PATHS = /^\/(properties|avm\/value|avm\/rent\/long-term|listings\/sale)$/;
 const JWKS = 'https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com';
 let keys = { at: 0, list: [] };
 

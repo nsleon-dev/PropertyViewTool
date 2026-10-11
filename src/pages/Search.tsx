@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { AreaPanel, AreaTiles, useArea } from '../components/Area';
 import { ParcelList } from '../components/ParcelList';
+import { circle, milesBetween, type LatLng as Pt } from '../lib/area';
 import { SubjectPanel, type Target } from '../components/SubjectPanel';
 import { LookupView } from './Lookup';
 import { FilterPanel } from '../components/FilterPanel';
@@ -88,6 +90,27 @@ export function Search() {
   const [outline, setOutline] = useState<ParcelRecord['outline'] | null>(null);
   const [showResults, setShowResults] = useState(memory.showResults);
   const [sheet, setSheet] = useState<Target | null>(null);
+  // Drawing a search perimeter: clicks add corners (polygon) or set the centre then the edge (circle).
+  const [draw, setDraw] = useState<{ mode: 'polygon' | 'circle'; pts: Pt[] } | null>(null);
+  const [boundary, setBoundary] = useState<Pt[] | null>(null);
+  const area = useArea(boundary);
+  const finishDraw = (ring: Pt[]) => {
+    setDraw(null);
+    setInspect(null);
+    setBoundary(ring);
+    setShowResults(true);
+  };
+  const mapClick = (at: Pt) => {
+    if (!draw) return setInspect({ kind: 'spot', ...at });
+    if (draw.mode === 'polygon') return setDraw({ ...draw, pts: [...draw.pts, at] });
+    if (!draw.pts.length) return setDraw({ ...draw, pts: [at] });
+    finishDraw(circle(draw.pts[0], Math.max(0.02, milesBetween(draw.pts[0], at))));
+  };
+  const areaPins: MapPoint[] = useMemo(() => area.items.slice(0, MAX_PINS).map((p) => ({ id: `a:${p.key}`, lat: p.lat, lng: p.lng, color: '#14707f', label: p.right ? `${p.title} · ${p.right}` : p.title })), [area.items]);
+  const pickPin = (id: string) => {
+    const hit = id.startsWith('a:') ? area.items.find((p) => `a:${p.key}` === id) : null;
+    setInspect(hit ? { kind: 'spot', lat: hit.lat, lng: hit.lng } : { kind: 'record', id });
+  };
   const spot = inspect?.kind === 'spot' ? inspect : null;
   // A searched or clicked property always opens its panel.
   useEffect(() => {
@@ -271,16 +294,18 @@ export function Search() {
         </div>
       )}
 
+      {boundary && <AreaTiles area={area} />}
       <div className="search-body">
         {showFilters && <FilterPanel criteria={criteria} onChange={(c) => update({ criteria: c })} onClose={() => setShowFilters(false)} resultCount={results.length} />}
         <div className="map-wrap">
           <MapView
-            points={points}
+            points={boundary ? areaPins : points}
+            area={draw?.pts.length ? { ring: draw.pts, closed: false } : boundary ? { ring: boundary, closed: true } : null}
             activeId={hover ?? focusId}
             fitKey={fitKey}
-            onPick={(id) => setInspect({ kind: 'record', id })}
+            onPick={pickPin}
             onMove={setMoved}
-            onMapClick={(at) => setInspect({ kind: 'spot', ...at })}
+            onMapClick={mapClick}
             pin={inspect?.kind === 'spot' ? inspect : null}
             outline={outline}
             panTo={inspect?.kind === 'spot' && inspect.address ? { lat: inspect.lat, lng: inspect.lng, zoom: 18 } : focusProp ?? null}
@@ -291,7 +316,24 @@ export function Search() {
           <button className="results-toggle" onClick={() => setShowResults(!showResults)} aria-expanded={showResults} title={showResults ? 'Hide results list' : 'Show results list'}>
             {showResults ? '›' : '‹ Parcels'}
           </button>
-          {moved && (
+          <div className="draw-bar">
+            {!draw && !boundary && (
+              <>
+                <button className="btn pill" onClick={() => setDraw({ mode: 'polygon', pts: [] })} title="Click corners on the map to outline an area">✎ Draw Area</button>
+                <button className="btn pill" onClick={() => setDraw({ mode: 'circle', pts: [] })} title="Click a centre, then click how far out to search">◯ Radius</button>
+              </>
+            )}
+            {draw && (
+              <>
+                <span className="draw-hint">{draw.mode === 'polygon' ? (draw.pts.length < 3 ? 'Click the map to place corners (3 or more)' : 'Add more corners, or finish') : draw.pts.length ? 'Now click how far out to search' : 'Click the centre of the area'}</span>
+                {draw.mode === 'polygon' && <button className="btn pill primary" disabled={draw.pts.length < 3} onClick={() => finishDraw(draw.pts)}>Finish</button>}
+                {draw.pts.length > 0 && <button className="btn pill" onClick={() => setDraw({ ...draw, pts: draw.pts.slice(0, -1) })}>Undo</button>}
+                <button className="btn pill" onClick={() => setDraw(null)}>Cancel</button>
+              </>
+            )}
+            {boundary && !draw && <button className="btn pill" onClick={() => { setBoundary(null); setInspect(null); }}>✕ Remove Boundary</button>}
+          </div>
+          {moved && !draw && !boundary && (
             <button className="btn primary map-redo" onClick={() => update({ loc: { kind: 'bounds', value: moved.join(','), label: 'Map area', bounds: moved } })}>
               Search this area
             </button>
@@ -308,6 +350,8 @@ export function Search() {
         <section className={`results${spot ? ' with-subject' : ''}`} hidden={!showResults}>
           {spot ? (
             <SubjectPanel key={`${spot.lat},${spot.lng}`} lat={spot.lat} lng={spot.lng} known={spot.address} onClose={() => setInspect(null)} onOpen={setSheet} onParcel={setOutline} />
+          ) : boundary ? (
+            <AreaPanel area={area} onOpen={(p) => setInspect({ kind: 'spot', lat: p.lat, lng: p.lng })} />
           ) : (
             <ParcelList view={center} onOpen={(p) => setInspect({ kind: 'spot', lat: p.lat, lng: p.lng })} />
           )}

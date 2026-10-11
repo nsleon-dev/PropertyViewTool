@@ -70,6 +70,12 @@ Searching an address or clicking a lot swaps that panel for the property's summa
 table (beds, baths, assessed value, last sale) loaded with one RentCast radius request; addresses open the
 full tabbed view as a pop-up.
 
+**Draw Area** / **Radius** on the map set a search perimeter (`src/lib/area.ts`). Tiles above the map count
+the real parcels inside it by category, worked out from the public record: Bank Owned and Company Owned
+(owner name), Absentee Owners (mailing address differs), Vacant Land (no improvement value). MLS loads
+RentCast for-sale listings (one request). Pre-Foreclosures, Auctions, Cash Buyers, Liens and High Equity
+are shown greyed: they need recorded mortgage and foreclosure data, which has no free source.
+
 Every US location also gets **Location Facts** (`src/lib/place.ts`): FEMA flood zone, city, county, school
 district (Census TIGERweb) and elevation (USGS).
 

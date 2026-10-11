@@ -34,6 +34,7 @@ export interface MapProps {
   initialView?: MapViewState | null; // open here instead of fitting to `points`
   onView?: (view: MapViewState) => void;
   outline?: LatLng[][] | null; // parcel boundary to highlight
+  area?: { ring: LatLng[]; closed: boolean } | null; // search perimeter, or one being drawn
   quiet?: boolean; // hide the "add a Google key" notice (small embedded maps)
 }
 
@@ -87,7 +88,8 @@ export function MapView(props: MapProps) {
   );
 }
 
-function LeafletMap({ points, activeId, fitKey, onPick, onMove, onMapClick, pin, panTo, initialView, onView, outline }: MapProps) {
+function LeafletMap({ points, activeId, fitKey, onPick, onMove, onMapClick, pin, panTo, initialView, onView, outline, area }: MapProps) {
+  const perimeter = useRef<L.LayerGroup | null>(null);
   const el = useRef<HTMLDivElement>(null);
   const map = useRef<L.Map | null>(null);
   const layer = useRef<L.LayerGroup | null>(null);
@@ -162,6 +164,17 @@ function LeafletMap({ points, activeId, fitKey, onPick, onMove, onMapClick, pin,
     shape.current?.remove();
     shape.current = outline?.length ? L.polygon(outline.map((ring) => ring.map((p) => [p.lat, p.lng] as [number, number])), { color: '#f26b21', weight: 3, fillOpacity: 0.15, interactive: false }).addTo(map.current!) : null;
   }, [outline]);
+
+  useEffect(() => {
+    perimeter.current?.remove();
+    perimeter.current = null;
+    if (!area?.ring.length) return;
+    const pts = area.ring.map((p) => [p.lat, p.lng] as [number, number]);
+    const style = { color: '#14707f', weight: 3, fillOpacity: 0.08, interactive: false };
+    const group = L.layerGroup([area.closed ? L.polygon(pts, style) : L.polyline(pts, style)]);
+    if (!area.closed) pts.forEach((pt) => L.circleMarker(pt, { radius: 5, color: '#14707f', fillColor: '#fff', fillOpacity: 1, weight: 2, interactive: false }).addTo(group));
+    perimeter.current = group.addTo(map.current!);
+  }, [area]);
 
   useEffect(() => {
     if (panTo) map.current!.setView([panTo.lat, panTo.lng], panTo.zoom ?? map.current!.getZoom(), { animate: true });
