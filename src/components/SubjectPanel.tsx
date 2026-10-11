@@ -25,6 +25,30 @@ const amount = (text: string | null | undefined) => (text ? Number(text.replace(
 const day = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString(undefined, { month: '2-digit', day: '2-digit', year: 'numeric', timeZone: 'UTC' }) : null);
 const dash = <span className="na">–</span>;
 
+interface Row {
+  key: string;
+  rank: number;
+  lat: number;
+  lng: number;
+  address: string;
+  street: string;
+  beds: number | null;
+  baths: number | null;
+  assessed: number | null;
+  salePrice: number | null;
+  saleDate: string | null;
+}
+type Col = 'rank' | 'address' | 'beds' | 'baths' | 'assessed' | 'salePrice' | 'saleDate';
+const COLS: { key: Col; label: string; num?: boolean }[] = [
+  { key: 'rank', label: '#' },
+  { key: 'address', label: 'Address' },
+  { key: 'beds', label: 'Beds', num: true },
+  { key: 'baths', label: 'Baths', num: true },
+  { key: 'assessed', label: 'Assessed Value', num: true },
+  { key: 'salePrice', label: 'Sale Amount', num: true },
+  { key: 'saleDate', label: 'Sale Date' },
+];
+
 // The searched or clicked property with the properties around it: a summary card on top
 // and a neighbours table below. Addresses open the full details pop-up.
 export function SubjectPanel({ lat, lng, known, onClose, onOpen, onParcel }: Props) {
@@ -38,6 +62,7 @@ export function SubjectPanel({ lat, lng, known, onClose, onOpen, onParcel }: Pro
   const [est, setEst] = useState<[string, string][] | null>(null);
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
+  const [sort, setSort] = useState<{ col: Col; asc: boolean }>({ col: 'rank', asc: true });
 
   useEffect(() => {
     let live = true;
@@ -83,6 +108,18 @@ export function SubjectPanel({ lat, lng, known, onClose, onOpen, onParcel }: Pro
   const lot = me?.lotSize ?? amount(pick(rows, /sq.? ?f(ee)?t|land.?size|stated ?area|lot.?size/i));
   const full = me?.address ?? title;
   const open = () => onOpen({ lat, lng, address: full });
+
+  // One row shape for both sources, in nearest-first order, then the chosen sort.
+  const list: Row[] = key
+    ? others.map((n, i) => ({ key: `${n.address}#${i}`, rank: i, lat: n.lat, lng: n.lng, address: n.address, street: n.unit ? `${n.street} ${n.unit}` : n.street, beds: n.beds, baths: n.baths, assessed: assessedFor(n), salePrice: n.salePrice, saleDate: n.saleDate }))
+    : (lots ?? []).map((p, i) => ({ key: p.key, rank: i, lat: p.lat, lng: p.lng, address: p.address ?? '', street: p.address ?? p.id ?? 'Parcel', beds: null, baths: null, assessed: amount(p.value), salePrice: null, saleDate: null }));
+  const sorted = [...list].sort((x, y) => {
+    const [a, b] = sort.col === 'address' ? [x.street, y.street] : [x[sort.col], y[sort.col]];
+    // Blank values stay at the bottom whichever way the column is sorted.
+    if (a == null || b == null) return a == null ? (b == null ? 0 : 1) : -1;
+    const d = typeof a === 'string' && typeof b === 'string' ? a.localeCompare(b, undefined, { numeric: true }) : Number(a) - Number(b);
+    return sort.asc ? d : -d;
+  });
 
   const estimate = async () => {
     setBusy(true);
@@ -132,37 +169,35 @@ export function SubjectPanel({ lat, lng, known, onClose, onOpen, onParcel }: Pro
 
       <div className="subject-nearby-head">
         <b>Nearby</b>
-        <span className="chip lead">Neighbors ({key ? others.length : lots?.length ?? 0})</span>
+        <span className="chip lead">Neighbors ({list.length})</span>
         {key ? near === null && <span className="muted">Loading…</span> : lots === null && <span className="muted">Loading…</span>}
       </div>
       {note && <p className="error pad">{note}</p>}
       <div className="subject-table">
         <table className="table compact">
-          <thead><tr><th>#</th><th>Address</th><th className="r">Beds</th><th className="r">Baths</th><th className="r">Assessed Value</th><th className="r">Sale Amount</th><th>Sale Date</th></tr></thead>
+          <thead>
+            <tr>
+              {COLS.map((c) => (
+                <th key={c.key} className={c.num ? 'r' : ''} aria-sort={sort.col === c.key ? (sort.asc ? 'ascending' : 'descending') : 'none'}>
+                  <button className="th-sort" onClick={() => setSort((x) => ({ col: c.key, asc: x.col === c.key ? !x.asc : c.key === 'address' || c.key === 'rank' }))} title={c.key === 'rank' ? 'Sort by distance from this property' : `Sort by ${c.label.toLowerCase()}`}>
+                    {c.label}{sort.col === c.key && <span aria-hidden="true">{sort.asc ? ' ▲' : ' ▼'}</span>}
+                  </button>
+                </th>
+              ))}
+            </tr>
+          </thead>
           <tbody>
-            {key
-              ? others.map((n, i) => (
-                  <tr key={n.address}>
-                    <td>{i + 1}</td>
-                    <td><button className="link" onClick={() => onOpen({ lat: n.lat, lng: n.lng, address: n.address })}>{n.street}</button></td>
-                    <td className="r">{n.beds ?? dash}</td>
-                    <td className="r">{n.baths ?? dash}</td>
-                    <td className="r">{assessedFor(n) ? money(assessedFor(n)!) : dash}</td>
-                    <td className="r">{n.salePrice ? money(n.salePrice) : dash}</td>
-                    <td>{day(n.saleDate) ?? dash}</td>
-                  </tr>
-                ))
-              : (lots ?? []).map((p, i) => (
-                  <tr key={p.key}>
-                    <td>{i + 1}</td>
-                    <td><button className="link" onClick={() => onOpen({ lat: p.lat, lng: p.lng, address: p.address ?? '' })}>{p.address ?? p.id ?? 'Parcel'}</button></td>
-                    <td className="r">{dash}</td>
-                    <td className="r">{dash}</td>
-                    <td className="r">{p.value ?? dash}</td>
-                    <td className="r">{dash}</td>
-                    <td>{dash}</td>
-                  </tr>
-                ))}
+            {sorted.map((n, i) => (
+              <tr key={n.key}>
+                <td>{i + 1}</td>
+                <td><button className="link" onClick={() => onOpen({ lat: n.lat, lng: n.lng, address: n.address })}>{n.street}</button></td>
+                <td className="r">{n.beds ?? dash}</td>
+                <td className="r">{n.baths ?? dash}</td>
+                <td className="r">{n.assessed ? money(n.assessed) : dash}</td>
+                <td className="r">{n.salePrice ? money(n.salePrice) : dash}</td>
+                <td>{day(n.saleDate) ?? dash}</td>
+              </tr>
+            ))}
           </tbody>
         </table>
         {key && near && !others.length && !note && <p className="muted pad">No nearby properties were returned for this spot.</p>}

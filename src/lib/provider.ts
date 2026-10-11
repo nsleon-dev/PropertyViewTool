@@ -105,6 +105,7 @@ export const cachedRecord = (address: string): ExternalRecord | null => cache.ge
 export interface Neighbor {
   address: string;
   street: string;
+  unit: string | null;
   lat: number;
   lng: number;
   beds: number | null;
@@ -143,6 +144,7 @@ async function fetchNearby(lat: number, lng: number, key: string, radius: number
       return {
         address: r.formattedAddress,
         street: r.addressLine1 ?? r.formattedAddress,
+        unit: r.addressLine2 || null,
         lat: r.latitude,
         lng: r.longitude,
         beds: r.bedrooms ?? null,
@@ -162,7 +164,8 @@ async function fetchNearby(lat: number, lng: number, key: string, radius: number
     .sort((x, y) => x.miles - y.miles)
     // The service sometimes lists one address twice; keep the copy with more filled in.
     .reduce((list: Neighbor[], n) => {
-      const i = list.findIndex((x) => x.address === n.address);
+      const same = (x: Neighbor) => x.street.toUpperCase() === n.street.toUpperCase() && (x.unit ?? '') === (n.unit ?? '');
+      const i = list.findIndex(same);
       const filled = (x: Neighbor) => [x.beds, x.baths, x.salePrice, x.saleDate, x.assessed].filter((v) => v != null).length;
       if (i < 0) list.push(n);
       else if (filled(n) > filled(list[i])) list[i] = n;
