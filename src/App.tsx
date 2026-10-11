@@ -2,6 +2,7 @@ import { NavLink, Route, Routes } from 'react-router-dom';
 import { Icon, Toasts } from './components/ui';
 import { AUTH_ENABLED, useAuth } from './lib/auth';
 import { useStore } from './lib/store';
+import { setTheme, useTheme } from './lib/theme';
 import { Login, VerifyEmail } from './pages/Login';
 import { Search } from './pages/Search';
 import { PropertyDetail } from './pages/PropertyDetail';
@@ -29,6 +30,7 @@ const NAV = [
 export function App() {
   const { wallet } = useStore();
   const { ready, user } = useAuth();
+  const { shown } = useTheme();
   if (AUTH_ENABLED) {
     if (!ready) return <div className="login"><p className="muted">Loading…</p></div>;
     if (!user) return <><Login /><Toasts /></>;
@@ -47,6 +49,12 @@ export function App() {
           </NavLink>
         ))}
         <div className="rail-spacer" />
+        <button className="rail-item rail-theme" onClick={() => setTheme(shown === 'dark' ? 'light' : 'dark')} aria-label={`Switch to ${shown === 'dark' ? 'light' : 'dark'} mode`} title={`Switch to ${shown === 'dark' ? 'light' : 'dark'} mode`}>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            {shown === 'dark' ? <><circle cx="12" cy="12" r="4" /><path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4L7 17M17 7l1.4-1.4" /></> : <path d="M20 14.5A8 8 0 019.5 4a8 8 0 1010.5 10.5z" />}
+          </svg>
+          <span>{shown === 'dark' ? 'Light' : 'Dark'}</span>
+        </button>
         <NavLink to="/account" className={({ isActive }) => `rail-item${isActive ? ' active' : ''}`}>
           {user?.photoURL ? <img className="rail-avatar" src={user.photoURL} alt="" referrerPolicy="no-referrer" /> : <Icon name="person" size={22} />}
           <span>Account</span>

@@ -116,7 +116,10 @@ export function SubjectPanel({ lat, lng, known, onClose, onOpen, onParcel }: Pro
   // One row shape for both sources, in nearest-first order, then the chosen sort.
   const list: Row[] = key
     ? others.map((n, i) => ({ key: `${n.address}#${i}`, rank: i, lat: n.lat, lng: n.lng, address: n.address, street: n.unit ? `${n.street} ${n.unit}` : n.street, beds: n.beds, baths: n.baths, assessed: assessedFor(n), salePrice: n.salePrice, saleDate: n.saleDate, miles: n.miles }))
-    : (lots ?? []).map((p, i) => ({ key: p.key, rank: i, lat: p.lat, lng: p.lng, address: p.address ?? '', street: p.address ?? p.id ?? 'Parcel', beds: null, baths: null, assessed: amount(p.value), salePrice: null, saleDate: null, miles: Math.hypot((p.lng - lng) * 69.17 * Math.cos((lat * Math.PI) / 180), (p.lat - lat) * 69.05) }));
+    : (lots ?? []).map((p, i) => ({ key: p.key, rank: i, lat: p.lat, lng: p.lng, address: p.address ?? '', street: p.address ?? p.id ?? 'Parcel', beds: null, baths: null, assessed: amount(p.value), salePrice: null, saleDate: null, miles: Math.hypot((p.lng - lng) * 69.17 * Math.cos((lat * Math.PI) / 180), (p.lat - lat) * 69.05) }))
+        // The public list arrives in address order; rank it nearest-first like the other source.
+        .sort((a, b) => a.miles - b.miles)
+        .map((r, i) => ({ ...r, rank: i }));
   const sorted = [...list].sort((x, y) => {
     const [a, b] = sort.col === 'address' ? [x.street, y.street] : [x[sort.col], y[sort.col]];
     // Blank values stay at the bottom whichever way the column is sorted.

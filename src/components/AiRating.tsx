@@ -35,7 +35,7 @@ export function AiRating({ id, facts, note, loading }: { id: string; facts: () =
     >
       {!key && <p className="muted">Add an Anthropic API key under <Link to="/account">Account</Link> to have Claude rate this property from every fact on the record.</p>}
       {error && <p className="error" role="alert">{error}</p>}
-      {key && !r && !error && <p className="muted">Sends the facts on this record (no owner names or contact details) to Claude ({AI_MODEL}) and returns a 0–100 rating with its reasons. Each rating is one billed API request.</p>}
+      {key && !r && !error && <p className="muted">Sends the facts on this record (no owner names or contact details) to Claude ({AI_MODEL}) and returns a 0–100 rating with its reasons. Each rating is one small API request.</p>}
       {r && (
         <>
           <div className="ai-head">

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Modal, Stat, toast } from '../components/ui';
 import { AUTH_ENABLED, signOut, useAuth } from '../lib/auth';
+import { setTheme, useTheme, type Theme } from '../lib/theme';
 import { allProperties } from '../lib/data';
 import { FILTERS, LEAD_LISTS } from '../lib/filters';
 import { PERMISSIONS, POSTCARD_COST, SKIP_COST, BUILT_IN_GOOGLE, RENTCAST_PROXY, aiKey, dataKey, googleKey, resetAll, setState, uid, useStore, type Member } from '../lib/store';
@@ -9,6 +10,7 @@ export function Account() {
   const { team, wallet, activity, settings } = useStore();
   const [keys, setKeys] = useState(settings);
   const { user } = useAuth();
+  const { theme } = useTheme();
   const [edit, setEdit] = useState<Member | null>(null);
   const [amount, setAmount] = useState(25);
 
@@ -33,6 +35,18 @@ export function Account() {
           <p className="muted">Lists, notes and starred properties are saved in this browser, separately for each account. They do not follow you to another device.</p>
         </div>
       )}
+
+      <div className="panel">
+        <h3>Appearance</h3>
+        <div className="row">
+          <div className="seg" role="group" aria-label="Colour theme">
+            {(['light', 'dark', 'system'] as Theme[]).map((t) => (
+              <button key={t} className={theme === t ? 'on' : ''} aria-pressed={theme === t} onClick={() => setTheme(t)}>{t === 'system' ? 'Match device' : t[0].toUpperCase() + t.slice(1)}</button>
+            ))}
+          </div>
+          <span className="muted">Saved on this device. Maps stay in their own colours.</span>
+        </div>
+      </div>
 
       <div className="panel">
         <h3>Wallet</h3>
@@ -83,14 +97,20 @@ export function Account() {
             </p>
           </>
         )}
-        <label className="field">
-          <span>Anthropic API key (AI deal rating) {aiKey() ? '· active' : '· not set'}</span>
-          <input type="password" value={keys.aiKey ?? ''} onChange={(e) => setKeys({ ...keys, aiKey: e.target.value.trim() })} placeholder="sk-ant-…" autoComplete="off" spellCheck={false} />
-        </label>
-        <p className="muted">
-          Optional. With a key from <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noreferrer">console.anthropic.com</a>, the Intelligence tab can ask Claude to rate a
-          property from every fact on its record. Each rating is one API request billed to your Anthropic account, typically a few cents.
-        </p>
+        {RENTCAST_PROXY ? (
+          <p className="muted"><b>AI deal rating (Claude)</b> · built into this site. The key is held on the server and never sent to this browser.</p>
+        ) : (
+          <>
+            <label className="field">
+              <span>Anthropic API key (AI deal rating) {aiKey() ? '· active' : '· not set'}</span>
+              <input type="password" value={keys.aiKey ?? ''} onChange={(e) => setKeys({ ...keys, aiKey: e.target.value.trim() })} placeholder="sk-ant-…" autoComplete="off" spellCheck={false} />
+            </label>
+            <p className="muted">
+              Optional. With a key from <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noreferrer">console.anthropic.com</a>, the Intelligence tab can ask Claude to rate a
+              property from every fact on its record. Each rating is one small API request billed to your Anthropic account.
+            </p>
+          </>
+        )}
         <div className="row">
           <button className="btn primary" onClick={() => { setState(() => ({ settings: keys })); location.reload(); }}>Save Keys &amp; Reload</button>
           <span className="muted">Keys are stored only in this browser.</span>

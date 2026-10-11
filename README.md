@@ -90,8 +90,10 @@ demographics, tax, mortgage/transactions and documents. Real addresses show only
   tract it touches by the share of the tract's area inside the circle, and estimates median income from the
   blended income brackets.
 - **AI Deal Rating** (Intelligence tab) sends the record's facts, without owner names or contact details, to
-  Claude with your Anthropic API key (Account, or `VITE_ANTHROPIC_API_KEY`) and stores the returned rating in
-  the browser. The model is set in `src/lib/ai.ts`.
+  Claude Haiku 5.5 (`src/lib/ai.ts`) and stores the returned rating in the browser. On the hosted site the
+  request goes through the worker, which holds the key: `cd worker && npx wrangler secret put ANTHROPIC_API_KEY`.
+  Locally, enter a key under Account or set `VITE_ANTHROPIC_API_KEY`.
+- **Dark mode**: the sun/moon button in the left rail, or Account > Appearance (light, dark, match device).
 - **Foreclosure Factor** is a rule-based score (`src/lib/insight.ts`), not a trained model.
 - Property-condition grading, listing photos and mortgage records for real addresses have no free source.
 

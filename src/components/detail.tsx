@@ -89,7 +89,7 @@ function Ring({ pct }: { pct: number | null }) {
   const share = Math.max(0, Math.min(100, pct ?? 0)) / 100;
   return (
     <svg width="44" height="44" viewBox="0 0 40 40" aria-hidden="true">
-      <circle cx="20" cy="20" r="16" fill="none" stroke="#e3e7ee" strokeWidth="6" />
+      <circle cx="20" cy="20" r="16" fill="none" style={{ stroke: 'var(--track)' }} strokeWidth="6" />
       {pct != null && <circle cx="20" cy="20" r="16" fill="none" stroke="#2a78d6" strokeWidth="6" strokeDasharray={`${c * share} ${c}`} transform="rotate(-90 20 20)" />}
     </svg>
   );
