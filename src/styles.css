@@ -440,7 +440,7 @@ code { background: #e8ecf2; padding: 1px 5px; border-radius: 3px; }
 .info-star + .info-body { padding-top: 46px; }
 
 /* Searched property + neighbours (right panel) and its details pop-up */
-.results.with-subject { width: 560px; }
+.results.with-subject { width: 630px; }
 .subject { display: flex; flex-direction: column; min-height: 0; flex: 1; background: var(--panel); }
 .subject-photo { position: relative; flex: none; background: #dfe5ee; min-height: 46px; }
 .subject-photo .street-view { height: 170px; border-radius: 0; }

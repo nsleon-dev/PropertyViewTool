@@ -23,6 +23,8 @@ interface Props {
 
 const amount = (text: string | null | undefined) => (text ? Number(text.replace(/[^0-9.]/g, '')) || null : null);
 const day = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString(undefined, { month: '2-digit', day: '2-digit', year: 'numeric', timeZone: 'UTC' }) : null);
+// Feet for the houses next door, miles beyond a couple of blocks.
+const far = (miles: number) => (miles < 0.1 ? `${Math.round((miles * 5280) / 10) * 10} ft` : `${miles.toFixed(2)} mi`);
 const dash = <span className="na">–</span>;
 
 interface Row {
@@ -37,11 +39,13 @@ interface Row {
   assessed: number | null;
   salePrice: number | null;
   saleDate: string | null;
+  miles: number;
 }
-type Col = 'rank' | 'address' | 'beds' | 'baths' | 'assessed' | 'salePrice' | 'saleDate';
+type Col = 'rank' | 'address' | 'miles' | 'beds' | 'baths' | 'assessed' | 'salePrice' | 'saleDate';
 const COLS: { key: Col; label: string; num?: boolean }[] = [
   { key: 'rank', label: '#' },
   { key: 'address', label: 'Address' },
+  { key: 'miles', label: 'Distance', num: true },
   { key: 'beds', label: 'Beds', num: true },
   { key: 'baths', label: 'Baths', num: true },
   { key: 'assessed', label: 'Assessed Value', num: true },
@@ -111,8 +115,8 @@ export function SubjectPanel({ lat, lng, known, onClose, onOpen, onParcel }: Pro
 
   // One row shape for both sources, in nearest-first order, then the chosen sort.
   const list: Row[] = key
-    ? others.map((n, i) => ({ key: `${n.address}#${i}`, rank: i, lat: n.lat, lng: n.lng, address: n.address, street: n.unit ? `${n.street} ${n.unit}` : n.street, beds: n.beds, baths: n.baths, assessed: assessedFor(n), salePrice: n.salePrice, saleDate: n.saleDate }))
-    : (lots ?? []).map((p, i) => ({ key: p.key, rank: i, lat: p.lat, lng: p.lng, address: p.address ?? '', street: p.address ?? p.id ?? 'Parcel', beds: null, baths: null, assessed: amount(p.value), salePrice: null, saleDate: null }));
+    ? others.map((n, i) => ({ key: `${n.address}#${i}`, rank: i, lat: n.lat, lng: n.lng, address: n.address, street: n.unit ? `${n.street} ${n.unit}` : n.street, beds: n.beds, baths: n.baths, assessed: assessedFor(n), salePrice: n.salePrice, saleDate: n.saleDate, miles: n.miles }))
+    : (lots ?? []).map((p, i) => ({ key: p.key, rank: i, lat: p.lat, lng: p.lng, address: p.address ?? '', street: p.address ?? p.id ?? 'Parcel', beds: null, baths: null, assessed: amount(p.value), salePrice: null, saleDate: null, miles: Math.hypot((p.lng - lng) * 69.17 * Math.cos((lat * Math.PI) / 180), (p.lat - lat) * 69.05) }));
   const sorted = [...list].sort((x, y) => {
     const [a, b] = sort.col === 'address' ? [x.street, y.street] : [x[sort.col], y[sort.col]];
     // Blank values stay at the bottom whichever way the column is sorted.
@@ -179,7 +183,7 @@ export function SubjectPanel({ lat, lng, known, onClose, onOpen, onParcel }: Pro
             <tr>
               {COLS.map((c) => (
                 <th key={c.key} className={c.num ? 'r' : ''} aria-sort={sort.col === c.key ? (sort.asc ? 'ascending' : 'descending') : 'none'}>
-                  <button className="th-sort" onClick={() => setSort((x) => ({ col: c.key, asc: x.col === c.key ? !x.asc : c.key === 'address' || c.key === 'rank' }))} title={c.key === 'rank' ? 'Sort by distance from this property' : `Sort by ${c.label.toLowerCase()}`}>
+                  <button className="th-sort" onClick={() => setSort((x) => ({ col: c.key, asc: x.col === c.key ? !x.asc : c.key === 'address' || c.key === 'rank' || c.key === 'miles' }))} title={c.key === 'rank' ? 'Sort by distance from this property' : `Sort by ${c.label.toLowerCase()}`}>
                     {c.label}{sort.col === c.key && <span aria-hidden="true">{sort.asc ? ' ▲' : ' ▼'}</span>}
                   </button>
                 </th>
@@ -191,6 +195,7 @@ export function SubjectPanel({ lat, lng, known, onClose, onOpen, onParcel }: Pro
               <tr key={n.key}>
                 <td>{i + 1}</td>
                 <td><button className="link" onClick={() => onOpen({ lat: n.lat, lng: n.lng, address: n.address })}>{n.street}</button></td>
+                <td className="r">{far(n.miles)}</td>
                 <td className="r">{n.beds ?? dash}</td>
                 <td className="r">{n.baths ?? dash}</td>
                 <td className="r">{n.assessed ? money(n.assessed) : dash}</td>
