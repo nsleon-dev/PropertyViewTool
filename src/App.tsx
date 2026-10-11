@@ -1,6 +1,8 @@
 import { NavLink, Route, Routes } from 'react-router-dom';
 import { Icon, Toasts } from './components/ui';
+import { AUTH_ENABLED, useAuth } from './lib/auth';
 import { useStore } from './lib/store';
+import { Login, VerifyEmail } from './pages/Login';
 import { Search } from './pages/Search';
 import { PropertyDetail } from './pages/PropertyDetail';
 import { Lookup } from './pages/Lookup';
@@ -26,6 +28,12 @@ const NAV = [
 
 export function App() {
   const { wallet } = useStore();
+  const { ready, user } = useAuth();
+  if (AUTH_ENABLED) {
+    if (!ready) return <div className="login"><p className="muted">Loading…</p></div>;
+    if (!user) return <><Login /><Toasts /></>;
+    if (!user.emailVerified) return <VerifyEmail email={user.email ?? ''} />;
+  }
   return (
     <div className="app">
       <nav className="rail" aria-label="Main">

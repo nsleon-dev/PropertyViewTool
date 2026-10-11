@@ -114,9 +114,12 @@ const initial: State = {
   activity: [],
 };
 
+// Signed-in users each get their own copy of the saved data in this browser.
+let key = KEY;
+
 function load(): State {
   try {
-    const raw = localStorage.getItem(KEY);
+    const raw = localStorage.getItem(key);
     if (raw) return { ...initial, ...JSON.parse(raw) };
   } catch {
     // unreadable or blocked storage: start from defaults
@@ -134,10 +137,28 @@ export function getState() {
 export function setState(fn: (s: State) => Partial<State>) {
   state = { ...state, ...fn(state) };
   try {
-    localStorage.setItem(KEY, JSON.stringify(state));
+    localStorage.setItem(key, JSON.stringify(state));
   } catch {
     // quota or private mode: keep working in memory
   }
+  listeners.forEach((l) => l());
+}
+
+export function switchUser(uid: string | null) {
+  const next = uid ? `${KEY}.${uid}` : KEY;
+  if (next === key) return;
+  try {
+    // The first account used in this browser inherits what was saved before sign-in existed.
+    const old = localStorage.getItem(KEY);
+    if (uid && old && !localStorage.getItem(next)) {
+      localStorage.setItem(next, old);
+      localStorage.removeItem(KEY);
+    }
+  } catch {
+    // storage unavailable: nothing to carry over
+  }
+  key = next;
+  state = load();
   listeners.forEach((l) => l());
 }
 
@@ -185,7 +206,7 @@ export function createList(name: string, ids: string[], source?: MarketingList['
 }
 
 export function resetAll() {
-  localStorage.removeItem(KEY);
+  localStorage.removeItem(key);
   state = initial;
   listeners.forEach((l) => l());
 }

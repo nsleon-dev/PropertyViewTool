@@ -21,6 +21,20 @@ So visitors do not have to enter keys, and the keys are not shown on the Account
   `npx wrangler secret put ACCESS_CODE`, then `gh variable set RENTCAST_PROXY_URL --body https://<worker-url>`
   and re-run the deploy. Without an access code, anyone using the site can spend the RentCast quota.
 
+## Sign-in
+
+Optional. With a Firebase project the site shows a sign-in screen (Google, or email and password with a
+verification email) and the RentCast worker only serves signed-in users.
+
+1. Firebase console > Authentication: enable **Google** and **Email/Password**; under Settings > Authorised
+   domains add `nsleon-dev.github.io`.
+2. `gh variable set FIREBASE_API_KEY --body <apiKey>` and `gh variable set FIREBASE_PROJECT_ID --body <projectId>`
+   (from Project settings > Your apps > Web app), then re-run the deploy.
+3. In `worker/wrangler.toml` set `FIREBASE_PROJECT_ID` (and optionally `ALLOWED_EMAILS`, comma-separated, to
+   limit property-data lookups to approved people), then `npx wrangler deploy`.
+
+Saved lists, notes and starred properties stay in the browser, kept separately per account.
+
 ## Run
 
 Requires Node 18+.

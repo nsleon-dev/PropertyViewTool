@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Modal, Stat, toast } from '../components/ui';
+import { AUTH_ENABLED, signOut, useAuth } from '../lib/auth';
 import { allProperties } from '../lib/data';
 import { FILTERS, LEAD_LISTS } from '../lib/filters';
 import { PERMISSIONS, POSTCARD_COST, SKIP_COST, BUILT_IN_GOOGLE, RENTCAST_PROXY, aiKey, dataKey, googleKey, resetAll, setState, uid, useStore, type Member } from '../lib/store';
@@ -7,6 +8,7 @@ import { PERMISSIONS, POSTCARD_COST, SKIP_COST, BUILT_IN_GOOGLE, RENTCAST_PROXY,
 export function Account() {
   const { team, wallet, activity, settings } = useStore();
   const [keys, setKeys] = useState(settings);
+  const { user } = useAuth();
   const [edit, setEdit] = useState<Member | null>(null);
   const [amount, setAmount] = useState(25);
 
@@ -19,6 +21,18 @@ export function Account() {
   return (
     <div className="page">
       <div className="content-head"><h1>Account</h1></div>
+
+      {AUTH_ENABLED && user && (
+        <div className="panel">
+          <h3>Signed In</h3>
+          <div className="row">
+            <span>{user.displayName ? `${user.displayName} · ` : ''}{user.email}</span>
+            <span className="grow" />
+            <button className="btn" onClick={() => signOut()}>Sign Out</button>
+          </div>
+          <p className="muted">Lists, notes and starred properties are saved in this browser, separately for each account. They do not follow you to another device.</p>
+        </div>
+      )}
 
       <div className="panel">
         <h3>Wallet</h3>

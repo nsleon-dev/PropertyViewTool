@@ -412,3 +412,14 @@ code { background: #e8ecf2; padding: 1px 5px; border-radius: 3px; }
 .star-btn svg { fill: none; stroke: #5b6472; stroke-width: 1.8; stroke-linejoin: round; }
 .star-btn.on svg { fill: #f5b301; stroke: #c98f00; }
 .info-star { position: absolute; top: 8px; left: 8px; z-index: 2; background: #fff; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3); border-radius: 50%; }
+
+/* Sign-in */
+.login { min-height: 100vh; width: 100%; display: flex; align-items: center; justify-content: center; background: var(--navy); padding: 20px; }
+.login-card { background: var(--panel); border-radius: 12px; padding: 28px; width: 100%; max-width: 380px; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35); }
+.login-card h1 { font-size: 20px; margin: 14px 0; }
+.login-brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; }
+.login-or { display: flex; align-items: center; gap: 10px; color: var(--muted); margin: 14px 0; font-size: 13px; }
+.login-or::before, .login-or::after { content: ''; flex: 1; height: 1px; background: var(--line); }
+.login-links { display: flex; justify-content: space-between; margin-top: 14px; gap: 10px; flex-wrap: wrap; }
+.btn.google { padding: 9px 12px; gap: 10px; }
+.login-card .btn.block { margin-top: 6px; }
