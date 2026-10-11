@@ -70,7 +70,7 @@ Searching an address or clicking a lot swaps that panel for the property's summa
 table (beds, baths, assessed value, last sale) loaded with one RentCast radius request; addresses open the
 full tabbed view as a pop-up.
 
-**Draw Area** / **Radius** on the map set a search perimeter (`src/lib/area.ts`). Tiles above the map count
+**Freehand**, **Rectangle** and **Circle** on the map draw a search perimeter by press-and-drag (`src/lib/area.ts`). Tiles above the map count
 the real parcels inside it by category, worked out from the public record: Bank Owned and Company Owned
 (owner name), Absentee Owners (mailing address differs), Vacant Land (no improvement value). MLS loads
 RentCast for-sale listings (one request). Pre-Foreclosures, Auctions, Cash Buyers, Liens and High Equity

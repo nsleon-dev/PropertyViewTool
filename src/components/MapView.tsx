@@ -1,3 +1,4 @@
+import { DrawOverlay, type DrawMode } from './DrawOverlay';
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import L from 'leaflet';
@@ -34,7 +35,8 @@ export interface MapProps {
   initialView?: MapViewState | null; // open here instead of fitting to `points`
   onView?: (view: MapViewState) => void;
   outline?: LatLng[][] | null; // parcel boundary to highlight
-  area?: { ring: LatLng[]; closed: boolean } | null; // search perimeter, or one being drawn
+  area?: { ring: LatLng[]; closed: boolean } | null; // search perimeter
+  draw?: { mode: DrawMode; onDone: (ring: LatLng[]) => void; onCancel: () => void } | null; // active drawing tool
   quiet?: boolean; // hide the "add a Google key" notice (small embedded maps)
 }
 
@@ -88,7 +90,7 @@ export function MapView(props: MapProps) {
   );
 }
 
-function LeafletMap({ points, activeId, fitKey, onPick, onMove, onMapClick, pin, panTo, initialView, onView, outline, area }: MapProps) {
+function LeafletMap({ points, activeId, fitKey, onPick, onMove, onMapClick, pin, panTo, initialView, onView, outline, area, draw }: MapProps) {
   const perimeter = useRef<L.LayerGroup | null>(null);
   const el = useRef<HTMLDivElement>(null);
   const map = useRef<L.Map | null>(null);
@@ -181,5 +183,14 @@ function LeafletMap({ points, activeId, fitKey, onPick, onMove, onMapClick, pin,
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [panTo?.lat, panTo?.lng]);
 
-  return <div ref={el} className="map" />;
+  const toLatLng = (x: number, y: number) => {
+    const p = map.current?.containerPointToLatLng([x, y]);
+    return p ? { lat: p.lat, lng: p.lng } : null;
+  };
+  return (
+    <>
+      <div ref={el} className="map" />
+      {draw && <DrawOverlay mode={draw.mode} toLatLng={toLatLng} onDone={draw.onDone} onCancel={draw.onCancel} />}
+    </>
+  );
 }

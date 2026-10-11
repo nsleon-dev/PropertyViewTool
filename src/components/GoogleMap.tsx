@@ -1,3 +1,4 @@
+import { DrawOverlay } from './DrawOverlay';
 import { useEffect, useRef } from 'react';
 import type { MapProps } from './MapView';
 
@@ -41,7 +42,7 @@ const dot = (color: string, big?: boolean): google.maps.Symbol => ({
   strokeWeight: big ? 3 : 1.5,
 });
 
-export function GoogleMap({ points, activeId, fitKey, onPick, onMove, onMapClick, pin, panTo, initialView, onView, outline, area }: MapProps) {
+export function GoogleMap({ points, activeId, fitKey, onPick, onMove, onMapClick, pin, panTo, initialView, onView, outline, area, draw }: MapProps) {
   const perimeter = useRef<{ setMap(m: google.maps.Map | null): void }[]>([]);
   const el = useRef<HTMLDivElement>(null);
   const map = useRef<google.maps.Map | null>(null);
@@ -178,7 +179,23 @@ export function GoogleMap({ points, activeId, fitKey, onPick, onMove, onMapClick
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [panTo?.lat, panTo?.lng]);
 
-  return <div ref={el} className="map" />;
+  // Screen position over the map to coordinates (the map is never tilted or rotated here).
+  const toLatLng = (x: number, y: number) => {
+    const m = map.current;
+    const proj = m?.getProjection();
+    const b = m?.getBounds();
+    if (!m || !proj || !b) return null;
+    const scale = 2 ** (m.getZoom() ?? 0);
+    const nw = proj.fromLatLngToPoint(new google.maps.LatLng(b.getNorthEast().lat(), b.getSouthWest().lng()))!;
+    const p = proj.fromPointToLatLng(new google.maps.Point(nw.x + x / scale, nw.y + y / scale));
+    return p ? { lat: p.lat(), lng: p.lng() } : null;
+  };
+  return (
+    <>
+      <div ref={el} className="map" />
+      {draw && <DrawOverlay mode={draw.mode} toLatLng={toLatLng} onDone={draw.onDone} onCancel={draw.onCancel} />}
+    </>
+  );
 }
 
 // Street-level imagery for a clicked location; renders nothing when Google has no coverage there.

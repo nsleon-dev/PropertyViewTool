@@ -486,3 +486,6 @@ th[aria-sort='ascending'] .th-sort, th[aria-sort='descending'] .th-sort { color:
 .area-tile:hover:not(:disabled) { border-color: #14707f; }
 .area-tile.on { border-color: #14707f; background: #e7f3f5; box-shadow: inset 0 -3px 0 #14707f; }
 .area-tile:disabled { cursor: not-allowed; background: #f3f5f8; color: #9aa3b0; }
+.draw-overlay { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1001; cursor: crosshair; touch-action: none; user-select: none; }
+.draw-bar { z-index: 1002; }
+.draw-bar .btn.on { background: #14707f; border-color: #14707f; color: #fff; }

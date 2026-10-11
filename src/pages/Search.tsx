@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AreaPanel, AreaTiles, useArea } from '../components/Area';
 import { ParcelList } from '../components/ParcelList';
-import { circle, milesBetween, type LatLng as Pt } from '../lib/area';
+import type { DrawMode } from '../components/DrawOverlay';
+import type { LatLng as Pt } from '../lib/area';
 import { SubjectPanel, type Target } from '../components/SubjectPanel';
 import { LookupView } from './Lookup';
 import { FilterPanel } from '../components/FilterPanel';
@@ -18,6 +19,11 @@ import { setState, today, uid, useStore, type SearchState } from '../lib/store';
 
 const PAGE = 25;
 const MAX_PINS = 2500;
+const DRAW_TOOLS: { mode: DrawMode; label: string; hint: string; icon: JSX.Element }[] = [
+  { mode: 'free', label: 'Freehand', hint: 'Press and drag to trace any shape', icon: <path d="M2 11c1-5 3-8 5-7s-1 6 1 7 4-6 6-5" /> },
+  { mode: 'rect', label: 'Rectangle', hint: 'Press and drag from one corner to the opposite corner', icon: <rect x="2.5" y="3.5" width="11" height="9" rx="1" /> },
+  { mode: 'circle', label: 'Circle', hint: 'Press at the centre and drag outward', icon: <circle cx="8" cy="8" r="5.5" /> },
+];
 const SELECTED = '#1a73c7';
 
 const SORTS: Record<string, { label: string; fn: (a: Property, b: Property) => number }> = {
@@ -90,8 +96,8 @@ export function Search() {
   const [outline, setOutline] = useState<ParcelRecord['outline'] | null>(null);
   const [showResults, setShowResults] = useState(memory.showResults);
   const [sheet, setSheet] = useState<Target | null>(null);
-  // Drawing a search perimeter: clicks add corners (polygon) or set the centre then the edge (circle).
-  const [draw, setDraw] = useState<{ mode: 'polygon' | 'circle'; pts: Pt[] } | null>(null);
+  // Drawing a search perimeter: pick a tool, then press and drag on the map.
+  const [draw, setDraw] = useState<DrawMode | null>(null);
   const [boundary, setBoundary] = useState<Pt[] | null>(null);
   const area = useArea(boundary);
   const finishDraw = (ring: Pt[]) => {
@@ -99,12 +105,6 @@ export function Search() {
     setInspect(null);
     setBoundary(ring);
     setShowResults(true);
-  };
-  const mapClick = (at: Pt) => {
-    if (!draw) return setInspect({ kind: 'spot', ...at });
-    if (draw.mode === 'polygon') return setDraw({ ...draw, pts: [...draw.pts, at] });
-    if (!draw.pts.length) return setDraw({ ...draw, pts: [at] });
-    finishDraw(circle(draw.pts[0], Math.max(0.02, milesBetween(draw.pts[0], at))));
   };
   const areaPins: MapPoint[] = useMemo(() => area.items.slice(0, MAX_PINS).map((p) => ({ id: `a:${p.key}`, lat: p.lat, lng: p.lng, color: '#14707f', label: p.right ? `${p.title} · ${p.right}` : p.title })), [area.items]);
   const pickPin = (id: string) => {
@@ -300,12 +300,13 @@ export function Search() {
         <div className="map-wrap">
           <MapView
             points={boundary ? areaPins : points}
-            area={draw?.pts.length ? { ring: draw.pts, closed: false } : boundary ? { ring: boundary, closed: true } : null}
+            area={boundary ? { ring: boundary, closed: true } : null}
+            draw={draw ? { mode: draw, onDone: finishDraw, onCancel: () => setDraw(null) } : null}
             activeId={hover ?? focusId}
             fitKey={fitKey}
             onPick={pickPin}
             onMove={setMoved}
-            onMapClick={mapClick}
+            onMapClick={(at) => setInspect({ kind: 'spot', ...at })}
             pin={inspect?.kind === 'spot' ? inspect : null}
             outline={outline}
             panTo={inspect?.kind === 'spot' && inspect.address ? { lat: inspect.lat, lng: inspect.lng, zoom: 18 } : focusProp ?? null}
@@ -317,20 +318,13 @@ export function Search() {
             {showResults ? '›' : '‹ Parcels'}
           </button>
           <div className="draw-bar">
-            {!draw && !boundary && (
-              <>
-                <button className="btn pill" onClick={() => setDraw({ mode: 'polygon', pts: [] })} title="Click corners on the map to outline an area">✎ Draw Area</button>
-                <button className="btn pill" onClick={() => setDraw({ mode: 'circle', pts: [] })} title="Click a centre, then click how far out to search">◯ Radius</button>
-              </>
-            )}
-            {draw && (
-              <>
-                <span className="draw-hint">{draw.mode === 'polygon' ? (draw.pts.length < 3 ? 'Click the map to place corners (3 or more)' : 'Add more corners, or finish') : draw.pts.length ? 'Now click how far out to search' : 'Click the centre of the area'}</span>
-                {draw.mode === 'polygon' && <button className="btn pill primary" disabled={draw.pts.length < 3} onClick={() => finishDraw(draw.pts)}>Finish</button>}
-                {draw.pts.length > 0 && <button className="btn pill" onClick={() => setDraw({ ...draw, pts: draw.pts.slice(0, -1) })}>Undo</button>}
-                <button className="btn pill" onClick={() => setDraw(null)}>Cancel</button>
-              </>
-            )}
+            {DRAW_TOOLS.map((t) => (
+              <button key={t.mode} className={`btn pill${draw === t.mode ? ' on' : ''}`} aria-pressed={draw === t.mode} title={t.hint} onClick={() => setDraw(draw === t.mode ? null : t.mode)}>
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" aria-hidden="true">{t.icon}</svg>
+                {t.label}
+              </button>
+            ))}
+            {draw && <span className="draw-hint">{DRAW_TOOLS.find((t) => t.mode === draw)!.hint} · Esc to cancel</span>}
             {boundary && !draw && <button className="btn pill" onClick={() => { setBoundary(null); setInspect(null); }}>✕ Remove Boundary</button>}
           </div>
           {moved && !draw && !boundary && (
