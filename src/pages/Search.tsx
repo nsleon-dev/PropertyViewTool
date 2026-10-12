@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AreaPanel, AreaTiles, useArea } from '../components/Area';
 import { ParcelList } from '../components/ParcelList';
@@ -10,7 +10,7 @@ import { FilterPanel } from '../components/FilterPanel';
 import { InfoPanel, type Focus } from '../components/InfoPanel';
 import type { ParcelRecord } from '../lib/parcels';
 import { MapView, googleReady, type MapPoint, type MapViewState } from '../components/MapView';
-import { AddToListModal, Empty, Icon, Modal, Tag, Thumb, toast } from '../components/ui';
+import { AddToListModal, Empty, Icon, Modal, Tag, Thumb, toast, usePhone } from '../components/ui';
 import { runSkipTrace } from '../lib/actions';
 import { allProperties, distanceMiles, getProperty, type Property } from '../lib/data';
 import { LEAD_LISTS, describeCriteria, matchesLocation, parseQuery, runSearch, suggest, type Location } from '../lib/filters';
@@ -25,6 +25,9 @@ const DRAW_TOOLS: { mode: DrawMode; label: string; hint: string; icon: JSX.Eleme
   { mode: 'circle', label: 'Circle', hint: 'Press at the centre and drag outward', icon: <circle cx="8" cy="8" r="5.5" /> },
 ];
 const SELECTED = '#1a73c7';
+// On phones the results panel is a pull-up sheet under the map with three resting heights.
+type Snap = 'peek' | 'half' | 'full';
+const PEEK = 46;
 
 const SORTS: Record<string, { label: string; fn: (a: Property, b: Property) => number }> = {
   valueDesc: { label: 'Est. Value: High to Low', fn: (a, b) => b.estValue - a.estValue },
@@ -36,7 +39,7 @@ const SORTS: Record<string, { label: string; fn: (a: Property, b: Property) => n
 };
 
 // Survives leaving the page (e.g. to a property's full details) and coming back.
-const memory = { key: '', view: null as MapViewState | null, selected: new Set<string>(), page: 0, sort: 'valueDesc', showResults: true };
+const memory = { key: '', view: null as MapViewState | null, selected: new Set<string>(), page: 0, sort: 'valueDesc', showResults: true, snap: 'half' as Snap };
 // The last map position also survives a page reload.
 const VIEW_KEY = 'propertyview.mapview';
 try {
@@ -100,7 +103,45 @@ export function Search() {
   const [draw, setDraw] = useState<DrawMode | null>(null);
   const [boundary, setBoundary] = useState<Pt[] | null>(null);
   const area = useArea(boundary);
+  const phone = usePhone();
+  const [snap, setSnap] = useState<Snap>(memory.snap);
+  const panel = useRef<HTMLElement>(null);
+  const drag = useRef<{ y: number; h: number; moved: boolean } | null>(null);
+  const grab = (e: React.PointerEvent) => {
+    e.currentTarget.setPointerCapture(e.pointerId);
+    drag.current = { y: e.clientY, h: panel.current!.offsetHeight, moved: false };
+  };
+  const pull = (e: React.PointerEvent) => {
+    const d = drag.current;
+    const el = panel.current;
+    if (!d || !el) return;
+    const dy = d.y - e.clientY;
+    if (Math.abs(dy) > 6) d.moved = true;
+    if (!d.moved) return;
+    // Follows the finger directly; the snap animation takes over on release.
+    el.style.transition = 'none';
+    el.style.height = `${Math.max(PEEK, Math.min(el.parentElement!.clientHeight, d.h + dy))}px`;
+  };
+  const drop = (e: React.PointerEvent) => {
+    const d = drag.current;
+    const el = panel.current;
+    drag.current = null;
+    if (!d || !el) return;
+    el.style.transition = '';
+    el.style.height = '';
+    if (!d.moved) return setSnap(snap === 'half' ? 'peek' : 'half');
+    const room = el.parentElement!.clientHeight;
+    const h = d.h + d.y - e.clientY;
+    const stops: [Snap, number][] = [['peek', PEEK], ['half', room / 2], ['full', room]];
+    setSnap(stops.reduce((a, b) => (Math.abs(b[1] - h) < Math.abs(a[1] - h) ? b : a))[0]);
+  };
+  const pickTool = (mode: DrawMode) => {
+    setDraw(draw === mode ? null : mode);
+    // Clear the map for drawing.
+    if (draw !== mode) setSnap('peek');
+  };
   const finishDraw = (ring: Pt[]) => {
+    setSnap('half');
     setDraw(null);
     setInspect(null);
     setBoundary(ring);
@@ -114,7 +155,9 @@ export function Search() {
   const spot = inspect?.kind === 'spot' ? inspect : null;
   // A searched or clicked property always opens its panel.
   useEffect(() => {
-    if (spot) setShowResults(true);
+    if (!spot) return;
+    setShowResults(true);
+    setSnap((s) => (s === 'peek' ? 'half' : s));
   }, [spot]);
 
   const results = useMemo(() => runSearch(loc, criteria, leadLists).sort(SORTS[sort].fn), [loc, criteria, leadLists, sort]);
@@ -131,8 +174,8 @@ export function Search() {
     setSelected(new Set());
   }, [fitKey]);
   useEffect(() => {
-    Object.assign(memory, { selected, page, sort, showResults });
-  }, [selected, page, sort, showResults]);
+    Object.assign(memory, { selected, page, sort, showResults, snap });
+  }, [selected, page, sort, showResults, snap]);
 
   const focusId = inspect?.kind === 'record' ? inspect.id : null;
   const focusProp = focusId ? getProperty(focusId) : undefined;
@@ -203,7 +246,7 @@ export function Search() {
           <Icon name="search" />
           <input
             value={text}
-            placeholder={`${loc.label} — county, city, ZIP, APN, any US street address, or describe what you want`}
+            placeholder={phone ? 'Address, city, ZIP or description' : `${loc.label} — county, city, ZIP, APN, any US street address, or describe what you want`}
             aria-label="Search location or describe a search"
             onChange={(e) => setText(e.target.value)}
             onFocus={() => setFocus(true)}
@@ -319,12 +362,12 @@ export function Search() {
           </button>
           <div className="draw-bar">
             {DRAW_TOOLS.map((t) => (
-              <button key={t.mode} className={`btn pill${draw === t.mode ? ' on' : ''}`} aria-pressed={draw === t.mode} title={t.hint} onClick={() => setDraw(draw === t.mode ? null : t.mode)}>
+              <button key={t.mode} className={`btn pill${draw === t.mode ? ' on' : ''}`} aria-pressed={draw === t.mode} title={t.hint} aria-label={t.label} onClick={() => pickTool(t.mode)}>
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" aria-hidden="true">{t.icon}</svg>
-                {t.label}
+                <span className="draw-label">{t.label}</span>
               </button>
             ))}
-            {draw && <span className="draw-hint">{DRAW_TOOLS.find((t) => t.mode === draw)!.hint} · Esc to cancel</span>}
+            {draw && <span className="draw-hint">{DRAW_TOOLS.find((t) => t.mode === draw)!.hint}<span className="kbd-only"> · Esc to cancel</span></span>}
             {boundary && !draw && <button className="btn pill" onClick={() => { setBoundary(null); setInspect(null); }}>✕ Remove Boundary</button>}
           </div>
           {moved && !draw && !boundary && (
@@ -341,7 +384,13 @@ export function Search() {
           </div>
         </div>
 
-        <section className={`results${spot ? ' with-subject' : ''}`} hidden={!showResults}>
+        <section ref={panel} className={`results${spot ? ' with-subject' : ''}${phone ? ` snap-${snap}` : ''}`} hidden={!phone && !showResults}>
+          {phone && (
+            <button className="sheet-handle" onPointerDown={grab} onPointerMove={pull} onPointerUp={drop} onPointerCancel={drop} aria-label={snap === 'peek' ? 'Open the results panel' : 'Resize the results panel'} aria-expanded={snap !== 'peek'}>
+              <i />
+              <span>{spot ? spot.address ?? 'Selected property' : boundary ? 'Properties in the drawn area' : 'Parcels in view'}</span>
+            </button>
+          )}
           {spot ? (
             <SubjectPanel key={`${spot.lat},${spot.lng}`} lat={spot.lat} lng={spot.lng} known={spot.address} onClose={() => setInspect(null)} onOpen={setSheet} onParcel={setOutline} />
           ) : boundary ? (

@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#1b2536"/>
+  <rect x="106" y="146" width="300" height="220" rx="44" fill="#f26b21"/>
+  <text x="256" y="304" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="150" font-weight="800" fill="#fff">PV</text>
+</svg>

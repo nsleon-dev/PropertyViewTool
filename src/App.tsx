@@ -1,4 +1,5 @@
-import { NavLink, Route, Routes } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { NavLink, Route, Routes, useLocation } from 'react-router-dom';
 import { Icon, Toasts } from './components/ui';
 import { AUTH_ENABLED, useAuth } from './lib/auth';
 import { useStore } from './lib/store';
@@ -26,11 +27,16 @@ const NAV = [
   { to: '/calculators', icon: 'calc', label: 'Analysis' },
   { to: '/dashboard', icon: 'dashboard', label: 'Dashboard' },
 ];
+// Phones get a bottom tab bar instead of the side rail: these four, plus everything else under More.
+const TABS = ['/', '/my-properties', '/contacts', '/calculators'];
 
 export function App() {
   const { wallet } = useStore();
   const { ready, user } = useAuth();
   const { shown } = useTheme();
+  const { pathname } = useLocation();
+  const [more, setMore] = useState(false);
+  useEffect(() => setMore(false), [pathname]);
   if (AUTH_ENABLED) {
     if (!ready) return <div className="login"><p className="muted">Loading…</p></div>;
     if (!user) return <><Login /><Toasts /></>;
@@ -76,6 +82,38 @@ export function App() {
           <Route path="/account" element={<Account />} />
         </Routes>
       </main>
+      <nav className="tabbar" aria-label="Main">
+        {NAV.filter((n) => TABS.includes(n.to)).map((n) => (
+          <NavLink key={n.to} to={n.to} end={n.to === '/'} className={({ isActive }) => `tab${isActive && !more ? ' active' : ''}`}>
+            <Icon name={n.icon} size={22} />
+            <span>{n.label}</span>
+          </NavLink>
+        ))}
+        <button className={`tab${more || !TABS.includes(pathname) && !pathname.startsWith('/property') && pathname !== '/lookup' ? ' active' : ''}`} aria-expanded={more} onClick={() => setMore(!more)}>
+          {user?.photoURL ? <img className="rail-avatar" src={user.photoURL} alt="" referrerPolicy="no-referrer" /> : <Icon name="more" size={22} />}
+          <span>More</span>
+        </button>
+      </nav>
+      {more && (
+        <div className="more-backdrop" onClick={() => setMore(false)}>
+          <div className="more-sheet" role="dialog" aria-label="More pages" onClick={(e) => e.stopPropagation()}>
+            {NAV.filter((n) => !TABS.includes(n.to)).map((n) => (
+              <NavLink key={n.to} to={n.to} className={({ isActive }) => `more-item${isActive ? ' active' : ''}`}>
+                <Icon name={n.icon} size={24} />
+                <span>{n.label}</span>
+              </NavLink>
+            ))}
+            <NavLink to="/account" className={({ isActive }) => `more-item${isActive ? ' active' : ''}`}>
+              <Icon name="person" size={24} />
+              <span>Account</span>
+            </NavLink>
+            <button className="more-item" onClick={() => setTheme(shown === 'dark' ? 'light' : 'dark')}>
+              <Icon name={shown === 'dark' ? 'sun' : 'moon'} size={24} />
+              <span>{shown === 'dark' ? 'Light mode' : 'Dark mode'}</span>
+            </button>
+          </div>
+        </div>
+      )}
       <Toasts />
     </div>
   );
