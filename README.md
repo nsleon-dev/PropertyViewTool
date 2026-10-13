@@ -93,6 +93,7 @@ demographics, tax, mortgage/transactions and documents. Real addresses show only
   Claude Haiku 5.5 (`src/lib/ai.ts`) and stores the returned rating in the browser. On the hosted site the
   request goes through the worker, which holds the key: `cd worker && npx wrangler secret put ANTHROPIC_API_KEY`.
   Locally, enter a key under Account or set `VITE_ANTHROPIC_API_KEY`.
+- **Local lead lists**: drawing an area also searches the ArcGIS Online and Socrata open-data catalogs for public datasets on foreclosures, tax and sheriff sales, delinquent taxes and liens, code violations, and vacant or blighted property, and keeps the ones with records inside the boundary (`src/lib/leads.ts`). Nothing is hand-listed per county: coverage is whatever local governments and others publish, each list shows its publisher and last update, and where nothing is published the panel links to web searches for the county offices that hold the records.
 - **Dark mode**: the sun/moon button in the left rail, or Account > Appearance (light, dark, match device).
 - **Phones (Android and iPhone)**: below 720px wide the side rail becomes a bottom tab bar (Search, My Properties, Contacts, Analysis, More), the results panel becomes a pull-up sheet under the map (drag the grabber, or tap it), and pop-ups fill the screen. The site can be installed to the home screen: Chrome on Android > menu > *Add to Home screen*; Safari on iPhone > Share > *Add to Home Screen*.
 - **Foreclosure Factor** is a rule-based score (`src/lib/insight.ts`), not a trained model.

@@ -1,7 +1,8 @@
 // Searching inside a perimeter drawn on the map. Everything here comes from real
 // sources: the public parcel layer for the area (free) and, for the MLS tile, the
-// property data service's for-sale listings. Categories that need recorded mortgage
-// or foreclosure documents have no free source and are reported as unavailable.
+// property data service's for-sale listings. Foreclosure, sale, lien, code-violation and
+// blight tiles are filled from public datasets found for the area (see leads.ts).
+// Categories that need recorded mortgage documents have no free source.
 import { houseKey, parcelsInArea, pick, type AreaParcel } from './parcels';
 
 export interface LatLng {
@@ -94,15 +95,17 @@ export function bounding(ring: LatLng[]) {
   return { center, miles: Math.max(...ring.map((p) => milesBetween(center, p))) };
 }
 
-export type TileKey = 'all' | 'mls' | 'pre' | 'auction' | 'bank' | 'cash' | 'liens' | 'vacant' | 'equity' | 'absentee' | 'company';
+export type TileKey = 'all' | 'mls' | 'pre' | 'auction' | 'bank' | 'cash' | 'liens' | 'code' | 'blight' | 'vacant' | 'equity' | 'absentee' | 'company';
 export const TILES: { key: TileKey; label: string; needs?: 'owner' | 'mailing' | 'improvement'; why?: string; test?: (r: AreaRow) => boolean }[] = [
   { key: 'all', label: 'All Parcels', test: () => true },
   { key: 'mls', label: 'MLS' },
-  { key: 'pre', label: 'Pre-Foreclosures', why: 'Needs recorded foreclosure filings, which have no free source.' },
-  { key: 'auction', label: 'Auctions', why: 'Needs foreclosure auction schedules, which have no free source.' },
+  { key: 'pre', label: 'Pre-Foreclosures' },
+  { key: 'auction', label: 'Auctions' },
   { key: 'bank', label: 'Bank Owned', needs: 'owner', test: (r) => r.bank },
   { key: 'cash', label: 'Cash Buyers', why: 'Needs recorded mortgage documents to tell a cash purchase from a financed one.' },
-  { key: 'liens', label: 'Liens', why: 'Needs recorded lien documents, which have no free source.' },
+  { key: 'liens', label: 'Liens & Delinquent' },
+  { key: 'code', label: 'Code Violations' },
+  { key: 'blight', label: 'Vacant & Blighted' },
   { key: 'vacant', label: 'Vacant Land', needs: 'improvement', test: (r) => r.vacant },
   { key: 'equity', label: 'High Equity', why: 'Needs each property\'s loan balance, which has no free source.' },
   { key: 'absentee', label: 'Absentee Owners', needs: 'mailing', test: (r) => r.absentee },

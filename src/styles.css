@@ -553,6 +553,13 @@ th[aria-sort='ascending'] .th-sort, th[aria-sort='descending'] .th-sort { color:
 :root[data-theme='dark'] .draw-bar .btn:not(.on):not(.primary), :root[data-theme='dark'] .subject-photo-actions .btn, :root[data-theme='dark'] .info-close, :root[data-theme='dark'] .subject-close, :root[data-theme='dark'] .info-star, :root[data-theme='dark'] .subject-star { color: var(--text); }
 .switch-row { margin: 4px 0; }
 
+/* Public lead datasets found for a drawn area */
+.lead-source { display: flex; flex-direction: column; gap: 4px; padding: 8px 12px; background: var(--panel); border-bottom: 1px solid var(--line); flex: none; }
+.lead-source select { width: 100%; }
+.lead-offices { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 8px 2px; flex: none; }
+.lead-offices .muted { width: 100%; }
+.lead-offices .chip { color: var(--blue); }
+
 /* Phones: bottom tab bar, map with a pull-up panel, full-screen pop-ups */
 .tabbar, .sheet-handle, .more-backdrop { display: none; }
 @media (max-width: 720px) {
